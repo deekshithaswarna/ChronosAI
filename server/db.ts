@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertUser, users, documents, facts, actors, issues, InsertDocument, InsertFact, InsertActor, InsertIssue } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -89,4 +89,106 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+// Document queries
+export async function createDocument(doc: InsertDocument) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(documents).values(doc);
+  return result[0].insertId;
+}
+
+export async function getDocumentById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db.select().from(documents).where(eq(documents.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getUserDocuments(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return db.select().from(documents).where(eq(documents.userId, userId)).orderBy(desc(documents.createdAt));
+}
+
+export async function updateDocumentStatus(id: number, status: "pending" | "processing" | "completed" | "failed", errorMessage?: string, extractedText?: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(documents)
+    .set({ 
+      status, 
+      errorMessage: errorMessage || null,
+      extractedText: extractedText || null,
+      updatedAt: new Date()
+    })
+    .where(eq(documents.id, id));
+}
+
+// Fact queries
+export async function createFact(fact: InsertFact) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(facts).values(fact);
+  return result[0].insertId;
+}
+
+export async function getUserFacts(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return db.select().from(facts).where(eq(facts.userId, userId)).orderBy(facts.eventDate);
+}
+
+export async function getDocumentFacts(documentId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return db.select().from(facts).where(eq(facts.documentId, documentId)).orderBy(facts.eventDate);
+}
+
+export async function deleteDocument(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Delete associated facts first
+  await db.delete(facts).where(eq(facts.documentId, id));
+  
+  // Delete document
+  await db.delete(documents).where(and(eq(documents.id, id), eq(documents.userId, userId)));
+}
+
+// Actor queries
+export async function getUserActors(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return db.select().from(actors).where(eq(actors.userId, userId));
+}
+
+export async function createActor(actor: InsertActor) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(actors).values(actor);
+  return result[0].insertId;
+}
+
+// Issue queries
+export async function getUserIssues(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return db.select().from(issues).where(eq(issues.userId, userId));
+}
+
+export async function createIssue(issue: InsertIssue) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(issues).values(issue);
+  return result[0].insertId;
+}

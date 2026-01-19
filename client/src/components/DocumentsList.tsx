@@ -1,0 +1,109 @@
+import { FileText, Loader2, CheckCircle2, XCircle, Trash2 } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { trpc } from '@/lib/trpc';
+import { toast } from 'sonner';
+import { formatDistanceToNow } from 'date-fns';
+
+export function DocumentsList() {
+  const utils = trpc.useUtils();
+  const { data: documents, isLoading } = trpc.documents.list.useQuery();
+  const deleteMutation = trpc.documents.delete.useMutation({
+    onSuccess: () => {
+      utils.documents.list.invalidate();
+      utils.facts.list.invalidate();
+      toast.success('Document deleted');
+    },
+    onError: () => {
+      toast.error('Failed to delete document');
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!documents || documents.length === 0) {
+    return (
+      <Card className="p-12 text-center">
+        <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <h3 className="text-lg font-semibold mb-2">No documents yet</h3>
+        <p className="text-sm text-muted-foreground">
+          Upload your first legal document to get started
+        </p>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {documents.map(doc => (
+        <Card key={doc.id} className="p-4 hover:shadow-lg transition-all duration-200 hover:scale-[1.01]">
+          <div className="flex items-start gap-4">
+            <div className="p-2 bg-muted rounded-lg flex-shrink-0">
+              <FileText className="h-5 w-5 text-muted-foreground" />
+            </div>
+            
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <h4 className="font-semibold text-sm truncate">{doc.originalFilename}</h4>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Uploaded {formatDistanceToNow(new Date(doc.createdAt), { addSuffix: true })}
+                  </p>
+                </div>
+                
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {doc.status === 'pending' && (
+                    <Badge variant="secondary" className="gap-1">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Pending
+                    </Badge>
+                  )}
+                  {doc.status === 'processing' && (
+                    <Badge variant="secondary" className="gap-1">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Processing
+                    </Badge>
+                  )}
+                  {doc.status === 'completed' && (
+                    <Badge variant="default" className="gap-1 bg-green-500 hover:bg-green-600">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Completed
+                    </Badge>
+                  )}
+                  {doc.status === 'failed' && (
+                    <Badge variant="destructive" className="gap-1">
+                      <XCircle className="h-3 w-3" />
+                      Failed
+                    </Badge>
+                  )}
+                  
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => deleteMutation.mutate({ id: doc.id })}
+                    disabled={deleteMutation.isPending}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              
+              {doc.status === 'failed' && doc.errorMessage && (
+                <p className="text-xs text-destructive mt-2">
+                  Error: {doc.errorMessage}
+                </p>
+              )}
+            </div>
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
+}
