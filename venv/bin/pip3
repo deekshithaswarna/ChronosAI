@@ -1,4 +1,4 @@
-#!/home/ubuntu/chronos/venv/bin/python3.11
+#!/home/ubuntu/chronos/venv/bin/python3.10
 # -*- coding: utf-8 -*-
 import re
 import sys
