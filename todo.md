@@ -56,3 +56,12 @@
 - [x] Verify new environment with simple import test
 - [x] Update backend to use verified Python interpreter
 - [x] Test document upload end-to-end
+
+## Manual Python Environment Rebuild
+- [x] Identify clean system Python version
+- [x] Remove all existing venv directories
+- [x] Create manual_venv using /usr/bin/python3 -m venv
+- [x] Manually activate and install pypdf, python-docx, python-magic
+- [x] Test with simple sys.version check
+- [x] Update backend routers.ts to use manual_venv/bin/python
+- [x] Restart server and test document upload

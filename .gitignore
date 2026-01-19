@@ -108,6 +108,7 @@ temp/
 
 # Python virtual environment
 venv/
+manual_venv/
 __pycache__/
 *.pyc
 *.pyo
