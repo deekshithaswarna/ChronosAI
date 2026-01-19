@@ -187,7 +187,7 @@ async function extractTextPython(fileBuffer: Buffer, mimeType: string): Promise<
   const { spawn } = await import('child_process');
   
   return new Promise((resolve, reject) => {
-    const python = spawn('python3.11', ['-c', `
+    const python = spawn('/home/ubuntu/chronos/venv/bin/python', ['-c', `
 import sys
 import json
 sys.path.insert(0, '/home/ubuntu/chronos/server')
@@ -244,7 +244,7 @@ async function extractFactsLLM(text: string): Promise<any[]> {
   const { spawn } = await import('child_process');
   
   return new Promise((resolve, reject) => {
-    const python = spawn('python3.11', ['-c', `
+    const python = spawn('/home/ubuntu/chronos/venv/bin/python', ['-c', `
 import sys
 import json
 sys.path.insert(0, '/home/ubuntu/chronos/server')

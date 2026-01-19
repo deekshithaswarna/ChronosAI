@@ -41,3 +41,10 @@
 - [x] Test date normalization edge cases
 - [x] Test export functionality
 - [x] Final checkpoint and documentation
+
+## Bug Fixes
+- [x] Fix Python SRE module mismatch error
+- [x] Create stable Python 3.11 virtual environment
+- [x] Reinstall Python dependencies in venv
+- [x] Update backend to use venv Python interpreter
+- [x] Test document upload and processing
