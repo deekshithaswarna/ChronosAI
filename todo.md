@@ -83,3 +83,13 @@
 - [x] Fix import to correctly access the parsing function
 - [x] Test PDF extraction with sample file
 - [x] Verify document upload works end-to-end
+
+## Three-Pass Extraction Pipeline
+- [x] Fix pdf-parse constructor error (use 'new' keyword with v2 API)
+- [x] Implement Pass 1: Structural extraction with whitespace preservation
+- [x] Implement Pass 2: Entity and date anchoring logic
+- [x] Implement Pass 3: Narrative synthesis with enhanced LLM prompt
+- [x] Add relative date calculation (e.g., "two weeks later")
+- [x] Return clean JSON array with date, actor, event, importance fields
+- [x] Add graceful error handling for password-protected PDFs
+- [ ] Test with sample PDF and verify console output

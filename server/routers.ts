@@ -154,19 +154,19 @@ async function processDocumentAsync(documentId: number, s3Url: string, mimeType:
     const document = await db.getDocumentById(documentId);
     if (!document) throw new Error("Document not found");
     
-    // Save facts to database
+    // Save facts to database with new schema
     for (const fact of facts) {
       await db.createFact({
         documentId,
         userId: document.userId,
-        eventDate: new Date(fact.normalized_date),
-        originalDateText: fact.original_date,
-        summary: fact.summary,
-        fullText: fact.full_text,
-        actor: fact.actor || null,
-        issue: fact.issue || null,
+        eventDate: new Date(fact.date),
+        originalDateText: fact.date + (fact.time ? ` ${fact.time}` : ''),
+        summary: fact.event,
+        fullText: fact.originalText,
+        actor: fact.actor,
+        issue: null, // No longer extracted separately
         citation: fact.citation || null,
-        confidence: 100,
+        confidence: fact.importance * 10, // Convert 1-10 to 10-100
       });
     }
     

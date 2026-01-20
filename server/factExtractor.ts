@@ -1,52 +1,64 @@
 /**
- * LLM-based fact extraction and date normalization for legal documents
- * Pure Node.js/TypeScript implementation
+ * Pass 3: Narrative Synthesis with LLM
+ * Enhanced fact extraction with relative date calculation and importance scoring
  */
 import { invokeLLM } from './_core/llm';
+import { extractDateAnchors, type DateAnchor } from './documentExtractor';
 
 export interface ExtractedFact {
-  original_date: string;
-  normalized_date: string;
-  summary: string;
-  actor: string | null;
-  issue: string | null;
-  citation: string | null;
-  full_text: string;
+  date: string;
+  time?: string;
+  actor: string;
+  event: string;
+  importance: number; // 1-10 scale
+  citation?: string;
+  originalText: string;
 }
 
 /**
- * Extract structured facts from document text using LLM
+ * Pass 3: Extract structured chronology from document text using three-pass pipeline
+ * Handles relative dates like "the following day" or "two weeks later"
  */
 export async function extractFactsFromText(text: string): Promise<ExtractedFact[]> {
-  const systemPrompt = `You are a legal document analysis expert. Extract key facts, events, and dates from legal documents.
-
-For each fact you identify, extract:
-1. Date (in any format mentioned in the document)
-2. Event summary (1-2 sentences describing what happened)
-3. Actor (person, company, or entity involved)
-4. Issue (legal issue category, e.g., "Contract Dispute", "Discovery", "Motion Filed")
-5. Citation (any legal citation mentioned, if present)
-6. Full context (the complete relevant text from the document)
-
-Return ONLY valid JSON with no additional text. Format:
-{
-  "facts": [
-    {
-      "date": "original date string from document",
-      "summary": "brief 1-2 sentence summary",
-      "actor": "person or entity name",
-      "issue": "legal issue category",
-      "citation": "legal citation or null",
-      "full_text": "complete relevant text from document"
-    }
-  ]
+  // Pass 2: Extract date anchors from structured text
+  const dateAnchors = extractDateAnchors(text);
+  
+  if (dateAnchors.length === 0) {
+    // No dates found - still try to extract facts without date anchoring
+    return await extractFactsWithLLM(text, []);
+  }
+  
+  // Pass 3: Send anchored chunks to LLM for narrative synthesis
+  return await extractFactsWithLLM(text, dateAnchors);
 }
 
-If no facts are found, return: {"facts": []}`;
+/**
+ * Enhanced LLM prompt for legal chronology extraction
+ */
+async function extractFactsWithLLM(text: string, dateAnchors: DateAnchor[]): Promise<ExtractedFact[]> {
+  const systemPrompt = `You are a legal chronology expert. Extract a structured timeline from legal documents.
 
-  const userPrompt = `Extract all facts, events, and dates from this legal document:
+FOCUS ON:
+- Date: Exact date (calculate if relative like "the following day" or "two weeks later")
+- Time: Specific time if mentioned (e.g., "3:00 PM", "morning")
+- Actor: Who performed the action (person, company, entity)
+- Event: What happened (be specific and concise)
+- Importance: Rate 1-10 (10 = critical legal event like filing, verdict; 1 = minor administrative)
 
-${text.substring(0, 15000)}`; // Limit to first 15k chars to avoid token limits
+RELATIVE DATE HANDLING:
+- If text says "the following day" or "next day", add 1 day to the previous date
+- If text says "two weeks later", add 14 days to the previous date
+- If text says "a month later", add 30 days to the previous date
+- Always calculate the actual date
+
+Return ONLY valid JSON with no additional text.`;
+
+  const userPrompt = `Extract all legal events from this document. Pay special attention to dates and calculate relative dates based on context.
+
+${dateAnchors.length > 0 ? `\nDate anchors found:\n${dateAnchors.map(a => `- ${a.date}: ${a.context.substring(0, 150)}...`).join('\n')}\n` : ''}
+
+Document text (first 15000 chars):
+${text.substring(0, 15000)}`;
 
   try {
     const response = await invokeLLM({
@@ -57,29 +69,30 @@ ${text.substring(0, 15000)}`; // Limit to first 15k chars to avoid token limits
       response_format: {
         type: 'json_schema',
         json_schema: {
-          name: 'fact_extraction',
+          name: 'legal_chronology',
           strict: true,
           schema: {
             type: 'object',
             properties: {
-              facts: {
+              events: {
                 type: 'array',
                 items: {
                   type: 'object',
                   properties: {
-                    date: { type: 'string' },
-                    summary: { type: 'string' },
-                    actor: { type: ['string', 'null'] },
-                    issue: { type: ['string', 'null'] },
-                    citation: { type: ['string', 'null'] },
-                    full_text: { type: 'string' },
+                    date: { type: 'string', description: 'ISO date format YYYY-MM-DD' },
+                    time: { type: ['string', 'null'], description: 'Time if mentioned' },
+                    actor: { type: 'string', description: 'Who performed the action' },
+                    event: { type: 'string', description: 'What happened' },
+                    importance: { type: 'integer', description: 'Importance score 1-10', minimum: 1, maximum: 10 },
+                    citation: { type: ['string', 'null'], description: 'Legal citation if present' },
+                    originalText: { type: 'string', description: 'Original text excerpt' },
                   },
-                  required: ['date', 'summary', 'full_text'],
+                  required: ['date', 'actor', 'event', 'importance', 'originalText'],
                   additionalProperties: false,
                 },
               },
             },
-            required: ['facts'],
+            required: ['events'],
             additionalProperties: false,
           },
         },
@@ -91,20 +104,19 @@ ${text.substring(0, 15000)}`; // Limit to first 15k chars to avoid token limits
       throw new Error('No content in LLM response');
     }
 
-    // Content should be a string for JSON schema responses
     const contentString = typeof content === 'string' ? content : JSON.stringify(content);
     const result = JSON.parse(contentString);
-    const facts = result.facts || [];
+    const events = result.events || [];
 
-    // Normalize dates for each fact
-    return facts.map((fact: any) => ({
-      original_date: fact.date,
-      normalized_date: normalizeDate(fact.date),
-      summary: fact.summary,
-      actor: fact.actor || null,
-      issue: fact.issue || null,
-      citation: fact.citation || null,
-      full_text: fact.full_text,
+    // Normalize and validate dates
+    return events.map((event: any) => ({
+      date: normalizeDate(event.date),
+      time: event.time || undefined,
+      actor: event.actor,
+      event: event.event,
+      importance: Math.min(10, Math.max(1, event.importance)), // Clamp to 1-10
+      citation: event.citation || undefined,
+      originalText: event.originalText,
     }));
   } catch (error) {
     console.error('LLM extraction error:', error);
@@ -113,48 +125,20 @@ ${text.substring(0, 15000)}`; // Limit to first 15k chars to avoid token limits
 }
 
 /**
- * Normalize various date formats to ISO 8601 (YYYY-MM-DD)
+ * Normalize date to ISO 8601 format (YYYY-MM-DD)
  */
 export function normalizeDate(dateString: string): string {
   const cleaned = dateString.trim();
 
-  // Remove ordinal suffixes (1st, 2nd, 3rd, 4th, etc.)
-  const withoutOrdinals = cleaned.replace(/(\d+)(st|nd|rd|th)/g, '$1');
+  // Remove ordinal suffixes
+  const withoutOrdinals = cleaned.replace(/(\d+)(st|nd|rd|th)/gi, '$1');
 
-  // Common date format patterns to try
-  const formats = [
-    { regex: /^(\d{4})-(\d{1,2})-(\d{1,2})$/, format: 'YYYY-MM-DD' },
-    { regex: /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/, format: 'MM/DD/YYYY' },
-    { regex: /^(\d{1,2})-(\d{1,2})-(\d{4})$/, format: 'MM-DD-YYYY' },
-    { regex: /^(\d{4})\/(\d{1,2})\/(\d{1,2})$/, format: 'YYYY/MM/DD' },
-    { regex: /^(\d{1,2})\/(\d{1,2})\/(\d{2})$/, format: 'MM/DD/YY' },
-  ];
-
-  for (const { regex, format } of formats) {
-    const match = withoutOrdinals.match(regex);
-    if (match) {
-      let year, month, day;
-      if (format === 'YYYY-MM-DD') {
-        [, year, month, day] = match;
-      } else if (format === 'MM/DD/YYYY' || format === 'MM-DD-YYYY') {
-        [, month, day, year] = match;
-      } else if (format === 'YYYY/MM/DD') {
-        [, year, month, day] = match;
-      } else if (format === 'MM/DD/YY') {
-        [, month, day, year] = match;
-        // Convert 2-digit year to 4-digit (assume 2000s for years < 50, 1900s otherwise)
-        year = parseInt(year) < 50 ? `20${year}` : `19${year}`;
-      }
-
-      if (year && month && day) {
-        const paddedMonth = month.padStart(2, '0');
-        const paddedDay = day.padStart(2, '0');
-        return `${year}-${paddedMonth}-${paddedDay}`;
-      }
-    }
+  // Try parsing as ISO date first
+  if (/^\d{4}-\d{2}-\d{2}$/.test(withoutOrdinals)) {
+    return withoutOrdinals;
   }
 
-  // Try parsing with Date constructor as fallback
+  // Try Date constructor
   try {
     const date = new Date(withoutOrdinals);
     if (!isNaN(date.getTime())) {
@@ -164,9 +148,50 @@ export function normalizeDate(dateString: string): string {
       return `${year}-${month}-${day}`;
     }
   } catch {
-    // Ignore parsing errors
+    // Continue to fallback
   }
 
-  // Last resort: return original string
+  // Return original if can't parse
   return cleaned;
+}
+
+/**
+ * Calculate relative date from anchor date
+ * E.g., "two weeks later" from "2024-03-01" = "2024-03-15"
+ */
+export function calculateRelativeDate(anchorDate: string, relativePhrase: string): string {
+  try {
+    const anchor = new Date(anchorDate);
+    if (isNaN(anchor.getTime())) {
+      return anchorDate; // Return original if invalid
+    }
+
+    const phrase = relativePhrase.toLowerCase();
+    let daysToAdd = 0;
+
+    if (phrase.includes('following day') || phrase.includes('next day')) {
+      daysToAdd = 1;
+    } else if (phrase.includes('week later') || phrase.includes('weeks later')) {
+      const weeks = parseInt(phrase.match(/(\d+)\s*weeks?/)?.[1] || '1');
+      daysToAdd = weeks * 7;
+    } else if (phrase.includes('month later') || phrase.includes('months later')) {
+      const months = parseInt(phrase.match(/(\d+)\s*months?/)?.[1] || '1');
+      daysToAdd = months * 30; // Approximate
+    } else if (phrase.includes('year later') || phrase.includes('years later')) {
+      const years = parseInt(phrase.match(/(\d+)\s*years?/)?.[1] || '1');
+      daysToAdd = years * 365;
+    }
+
+    if (daysToAdd > 0) {
+      anchor.setDate(anchor.getDate() + daysToAdd);
+      const year = anchor.getFullYear();
+      const month = String(anchor.getMonth() + 1).padStart(2, '0');
+      const day = String(anchor.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    return anchorDate;
+  } catch {
+    return anchorDate;
+  }
 }
