@@ -77,3 +77,9 @@
 - [x] Test DOCX upload and text extraction
 - [x] Test end-to-end fact extraction with LLM
 - [x] Verify timeline and data table work with new backend
+
+## Fix pdf-parse Import Error
+- [x] Debug pdf-parse module structure
+- [x] Fix import to correctly access the parsing function
+- [x] Test PDF extraction with sample file
+- [x] Verify document upload works end-to-end
