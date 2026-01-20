@@ -8,20 +8,20 @@ import mammoth from 'mammoth';
 
 /**
  * Pass 1: Extract text from PDF with structural preservation
- * Preserves whitespace, headers, footers for proper legal document parsing
+ * Uses classic pdf-parse v1 API - simple and battle-tested
  */
 export async function extractTextFromPdf(fileBuffer: Buffer): Promise<string> {
   try {
-    // Dynamic import for CommonJS module - pdf-parse v2 API
+    // Dynamic import for CommonJS module - pdf-parse v1 is a direct function
+    // @ts-ignore - pdf-parse v1 doesn't have TypeScript definitions
     const pdfParseModule: any = await import('pdf-parse');
-    const PDFParse = pdfParseModule.PDFParse;
+    const pdfParse = pdfParseModule.default || pdfParseModule;
     
-    // Use 'new' keyword with buffer option
-    const parser = new PDFParse({ buffer: fileBuffer });
-    const result = await parser.getText();
+    // Call pdf-parse directly as a function with buffer
+    const data = await pdfParse(fileBuffer);
     
     // Return raw text with preserved structure
-    return result.text;
+    return data.text;
   } catch (error) {
     // Handle password-protected or corrupted PDFs gracefully
     const errorMessage = error instanceof Error ? error.message : String(error);

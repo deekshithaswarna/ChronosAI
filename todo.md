@@ -93,3 +93,9 @@
 - [x] Return clean JSON array with date, actor, event, importance fields
 - [x] Add graceful error handling for password-protected PDFs
 - [ ] Test with sample PDF and verify console output
+
+## Fix PDF Extraction with Classic pdf-parse
+- [x] Refactor to use pdf-parse v1 direct function call pattern
+- [x] Remove complex v2 API class constructor
+- [x] Test with sample PDF and log extracted text
+- [x] Verify end-to-end document processing works
