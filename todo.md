@@ -99,3 +99,12 @@
 - [x] Remove complex v2 API class constructor
 - [x] Test with sample PDF and log extracted text
 - [x] Verify end-to-end document processing works
+
+## Fix Upload and Processing Pipeline
+- [x] Create test data generation script (create-test-data.cjs)
+- [x] Verify upload directory exists and files are saved correctly
+- [x] Test extraction with simple .txt file
+- [x] Log extracted JSON to console for verification
+- [x] Fix JSON schema for LLM structured output
+- [x] Verify extraction pipeline works end-to-end
+- [ ] Verify PDF upload works with real user uploads

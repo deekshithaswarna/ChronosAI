@@ -80,11 +80,11 @@ ${text.substring(0, 15000)}`;
                   type: 'object',
                   properties: {
                     date: { type: 'string', description: 'ISO date format YYYY-MM-DD' },
-                    time: { type: ['string', 'null'], description: 'Time if mentioned' },
+                    time: { type: 'string', description: 'Time if mentioned, empty string if not available' },
                     actor: { type: 'string', description: 'Who performed the action' },
                     event: { type: 'string', description: 'What happened' },
                     importance: { type: 'integer', description: 'Importance score 1-10', minimum: 1, maximum: 10 },
-                    citation: { type: ['string', 'null'], description: 'Legal citation if present' },
+                    citation: { type: 'string', description: 'Legal citation if present, empty string if not available' },
                     originalText: { type: 'string', description: 'Original text excerpt' },
                   },
                   required: ['date', 'actor', 'event', 'importance', 'originalText'],
@@ -99,8 +99,15 @@ ${text.substring(0, 15000)}`;
       },
     });
 
+    // Check if response is valid
+    if (!response || !response.choices || response.choices.length === 0) {
+      console.error('Invalid LLM response:', JSON.stringify(response, null, 2));
+      throw new Error('Invalid LLM response structure');
+    }
+    
     const content = response.choices[0]?.message?.content;
     if (!content) {
+      console.error('No content in LLM response:', JSON.stringify(response.choices[0], null, 2));
       throw new Error('No content in LLM response');
     }
 
