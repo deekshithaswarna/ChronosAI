@@ -65,3 +65,15 @@
 - [x] Test with simple sys.version check
 - [x] Update backend routers.ts to use manual_venv/bin/python
 - [x] Restart server and test document upload
+
+## Rebuild with Pure Node.js Stack
+- [x] Remove Python venv directories and Python files
+- [x] Verify Node.js environment
+- [x] Install pdf-parse, mammoth for document extraction
+- [x] Rewrite document extraction in Node.js/TypeScript
+- [x] Update fact extraction to use LLM directly from Node.js
+- [x] Remove Python spawn calls from routers.ts
+- [x] Test PDF upload and text extraction
+- [x] Test DOCX upload and text extraction
+- [x] Test end-to-end fact extraction with LLM
+- [x] Verify timeline and data table work with new backend

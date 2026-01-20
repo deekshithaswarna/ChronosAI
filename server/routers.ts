@@ -2,16 +2,13 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { extractText } from './documentExtractor';
+import { extractFactsFromText } from './factExtractor';
 import { z } from "zod";
 import * as db from "./db";
 import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
-import { invokeLLM } from "./_core/llm";
-import { spawn } from "child_process";
-import { promisify } from "util";
 import axios from "axios";
-
-const execAsync = promisify(spawn);
 
 export const appRouter = router({
   system: systemRouter,
@@ -147,11 +144,11 @@ async function processDocumentAsync(documentId: number, s3Url: string, mimeType:
     const response = await axios.get(s3Url, { responseType: 'arraybuffer' });
     const fileBuffer = Buffer.from(response.data);
     
-    // Extract text using Python script
-    const extractedText = await extractTextPython(fileBuffer, mimeType);
+    // Extract text using Node.js
+    const extractedText = await extractText(fileBuffer, mimeType);
     
     // Extract facts using LLM
-    const facts = await extractFactsLLM(extractedText);
+    const facts = await extractFactsFromText(extractedText);
     
     // Get document to get userId
     const document = await db.getDocumentById(documentId);
@@ -182,235 +179,3 @@ async function processDocumentAsync(documentId: number, s3Url: string, mimeType:
   }
 }
 
-// Helper to call Python extraction script
-async function extractTextPython(fileBuffer: Buffer, mimeType: string): Promise<string> {
-  const { spawn } = await import('child_process');
-  
-  return new Promise((resolve, reject) => {
-    const python = spawn('/home/ubuntu/chronos/manual_venv/bin/python', ['-c', `
-import sys
-import json
-sys.path.insert(0, '/home/ubuntu/chronos/server')
-from document_processor import extract_text
-
-# Read binary data from stdin
-file_bytes = sys.stdin.buffer.read()
-mime_type = sys.argv[1]
-
-try:
-    text = extract_text(file_bytes, mime_type)
-    print(json.dumps({"success": True, "text": text}))
-except Exception as e:
-    print(json.dumps({"success": False, "error": str(e)}))
-`, mimeType]);
-
-    let stdout = '';
-    let stderr = '';
-    
-    python.stdout.on('data', (data) => {
-      stdout += data.toString();
-    });
-    
-    python.stderr.on('data', (data) => {
-      stderr += data.toString();
-    });
-    
-    python.on('close', (code) => {
-      if (code !== 0) {
-        reject(new Error(`Python process exited with code ${code}: ${stderr}`));
-        return;
-      }
-      
-      try {
-        const result = JSON.parse(stdout);
-        if (result.success) {
-          resolve(result.text);
-        } else {
-          reject(new Error(result.error));
-        }
-      } catch (e) {
-        reject(new Error(`Failed to parse Python output: ${stdout}`));
-      }
-    });
-    
-    // Write file buffer to Python stdin
-    python.stdin.write(fileBuffer);
-    python.stdin.end();
-  });
-}
-
-// Helper to extract facts using LLM
-async function extractFactsLLM(text: string): Promise<any[]> {
-  const { spawn } = await import('child_process');
-  
-  return new Promise((resolve, reject) => {
-    const python = spawn('/home/ubuntu/chronos/manual_venv/bin/python', ['-c', `
-import sys
-import json
-sys.path.insert(0, '/home/ubuntu/chronos/server')
-
-# Read text from stdin
-text = sys.stdin.read()
-
-# Mock LLM function for Python (will be replaced with actual invokeLLM call from Node)
-def mock_llm_invoke(params):
-    # This won't be used - we'll call LLM from Node side
-    return {"choices": [{"message": {"content": '{"facts": []}'}}]}
-
-from fact_extractor import extract_facts_from_text
-
-try:
-    # For now, return empty - we'll call LLM from Node.js side
-    print(json.dumps({"success": True, "facts": []}))
-except Exception as e:
-    print(json.dumps({"success": False, "error": str(e)}))
-`]);
-
-    let stdout = '';
-    let stderr = '';
-    
-    python.stdout.on('data', (data) => {
-      stdout += data.toString();
-    });
-    
-    python.stderr.on('data', (data) => {
-      stderr += data.toString();
-    });
-    
-    python.on('close', async (code) => {
-      // Actually call LLM from Node.js side instead of Python
-      try {
-        const facts = await extractFactsFromTextNode(text);
-        resolve(facts);
-      } catch (e) {
-        reject(e);
-      }
-    });
-    
-    python.stdin.write(text);
-    python.stdin.end();
-  });
-}
-
-// Node.js implementation of fact extraction
-async function extractFactsFromTextNode(text: string): Promise<any[]> {
-  const systemPrompt = `You are a legal document analysis expert. Extract key facts, events, and dates from legal documents.
-
-For each fact you identify, extract:
-1. Date (in any format mentioned in the document)
-2. Event summary (1-2 sentences describing what happened)
-3. Actor (person, company, or entity involved)
-4. Issue (legal issue category, e.g., "Contract Dispute", "Discovery", "Motion Filed")
-5. Citation (any legal citation mentioned, if present)
-6. Full context (the complete relevant text from the document)
-
-Return ONLY valid JSON with no additional text. Format:
-{
-  "facts": [
-    {
-      "date": "original date string from document",
-      "summary": "brief 1-2 sentence summary",
-      "actor": "person or entity name",
-      "issue": "legal issue category",
-      "citation": "legal citation or null",
-      "full_text": "complete relevant text from document"
-    }
-  ]
-}
-
-If no facts are found, return: {"facts": []}`;
-
-  const userPrompt = `Extract all facts, events, and dates from this legal document:
-
-${text.slice(0, 15000)}`;
-
-  try {
-    const response = await invokeLLM({
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
-      ],
-      response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: "fact_extraction",
-          strict: true,
-          schema: {
-            type: "object",
-            properties: {
-              facts: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    date: { type: "string" },
-                    summary: { type: "string" },
-                    actor: { type: ["string", "null"] },
-                    issue: { type: ["string", "null"] },
-                    citation: { type: ["string", "null"] },
-                    full_text: { type: "string" }
-                  },
-                  required: ["date", "summary", "full_text"],
-                  additionalProperties: false
-                }
-              }
-            },
-            required: ["facts"],
-            additionalProperties: false
-          }
-        }
-      }
-    });
-
-    const content = response.choices[0].message.content;
-    const contentStr = typeof content === 'string' ? content : JSON.stringify(content);
-    const result = JSON.parse(contentStr);
-    
-    const facts = result.facts || [];
-    
-    // Normalize dates
-    for (const fact of facts) {
-      fact.normalized_date = normalizeDate(fact.date);
-      fact.original_date = fact.date;
-    }
-    
-    return facts;
-    
-  } catch (error) {
-    console.error("LLM extraction error:", error);
-    return [];
-  }
-}
-
-// Date normalization function (Node.js version)
-function normalizeDate(dateString: string): string {
-  // Remove ordinal suffixes
-  const cleaned = dateString.replace(/(\d+)(st|nd|rd|th)/g, '$1');
-  
-  // Try various date formats
-  const formats = [
-    { regex: /^(\d{4})-(\d{1,2})-(\d{1,2})$/, format: (m: RegExpMatchArray) => `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}` },
-    { regex: /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/, format: (m: RegExpMatchArray) => `${m[3]}-${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}` },
-    { regex: /^(\d{1,2})\/(\d{1,2})\/(\d{2})$/, format: (m: RegExpMatchArray) => `20${m[3]}-${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}` },
-  ];
-  
-  for (const { regex, format } of formats) {
-    const match = cleaned.match(regex);
-    if (match) {
-      return format(match);
-    }
-  }
-  
-  // Try to parse with Date object
-  try {
-    const date = new Date(cleaned);
-    if (!isNaN(date.getTime())) {
-      return date.toISOString().split('T')[0];
-    }
-  } catch (e) {
-    // Continue to fallback
-  }
-  
-  // Return original if can't parse
-  return dateString;
-}
