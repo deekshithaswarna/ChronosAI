@@ -701,3 +701,44 @@
 - [x] All cells have py-4 (16px top/bottom padding)
 - [x] Align first line of text in Date, Description, Comments columns
 - [x] Consistent padding ensures perfect alignment across all columns
+
+## Trash Icon Outside Table & UI Fixes
+
+- [x] Remove trash icon from inside Date cell
+- [x] Apply position: relative to table row (tr)
+- [x] Row already has relative positioning
+- [x] Create trash icon as absolute child of row
+- [x] Moved trash icon to be direct child of tr
+- [x] Position trash icon at left: -40px, top: 50%, transform: translateY(-50%)
+- [x] Applied exact positioning to float outside table
+- [x] Set opacity: 0 by default, opacity: 1 on tr:hover
+- [x] Trash icon fades in/out based on hoveredRowId
+- [x] Add margin-left: 50px to main container for trash icon space
+- [x] Applied marginLeft: 50px to main container
+- [x] Fix Comments double text bug (overlapping "Add comments")
+- [x] Remove current floating editor logic for Comments
+- [x] Removed floating overlay div and background text
+- [x] Use single standard textarea with placeholder
+- [x] Replaced with single Textarea component
+- [x] Bind value strictly to row data (no secondary label)
+- [x] Value bound to getCommentValue(fact) only
+- [x] Ensure vertical alignment matches Issues column
+- [x] Both have align-top and py-4 padding
+- [x] Apply transparent background to ALL inputs in all states
+- [x] All inputs now have bg-transparent
+- [x] Remove all borders from inputs (border: none !important)
+- [x] Applied border: 'none' to all input styles
+- [x] Remove all outlines (outline: none !important)
+- [x] Applied outline: 'none' to all input styles
+- [x] Remove all box-shadows (box-shadow: none !important)
+- [x] Applied boxShadow: 'none' to all input styles
+- [x] Only show blinking cursor as edit feedback
+- [x] Inputs are now completely invisible except for cursor
+- [x] Copy Actor/Person tag CSS to Issue tags
+- [x] Changed Issue tags to use Badge component
+- [x] Remove blue background from Issue tags
+- [x] Removed bg-blue-100 text-blue-800 classes
+- [x] Apply beige background, small text, rounded corners to Issue tags
+- [x] Applied variant="secondary" matching Actor tags
+- [x] Ensure Issue tags look identical to Actor tags
+- [x] Both use same Badge component with identical styling

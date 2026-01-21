@@ -619,7 +619,7 @@ export default function ChronologyTable() {
   const hasActiveFilters = selectedPersons.length > 0 || selectedIssues.length > 0 || selectedSources.length > 0;
 
   return (
-    <div className="px-4 py-12" style={{ maxWidth: '98vw', margin: '0 auto' }}>
+    <div className="px-4 py-12" style={{ maxWidth: '98vw', margin: '0 auto', marginLeft: '50px' }}>
       {/* Header with Export Buttons */}
       <div className="mb-6">
         <div className="flex items-center justify-between">
@@ -913,22 +913,23 @@ export default function ChronologyTable() {
                   onMouseEnter={() => setHoveredRowId(fact.id)}
                   onMouseLeave={() => setHoveredRowId(null)}
                 >
-                  {/* Date Column - Editable with Floating Editor & Ghost Delete */}
+                  {/* Trash Icon - Floats outside table on left */}
+                  <button
+                    onClick={() => handleDeleteFact(fact.id)}
+                    className="absolute text-[#9CA3AF] hover:text-[#EF4444] transition-all p-1 rounded"
+                    style={{ 
+                      left: '-40px', 
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      opacity: hoveredRowId === fact.id ? 1 : 0,
+                      pointerEvents: hoveredRowId === fact.id ? 'auto' : 'none'
+                    }}
+                    title="Delete this event"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                  {/* Date Column - Editable with Floating Editor */}
                   <td className="py-4 px-4 align-top relative" style={{ fontSize: '14px' }}>
-                    {/* Ghost Delete Icon - Floats on left side of Date cell */}
-                    <button
-                      onClick={() => handleDeleteFact(fact.id)}
-                      className="absolute text-[#9CA3AF] hover:text-[#EF4444] transition-all p-1 rounded"
-                      style={{ 
-                        left: '8px', 
-                        top: '16px',
-                        opacity: hoveredRowId === fact.id ? 1 : 0,
-                        pointerEvents: hoveredRowId === fact.id ? 'auto' : 'none'
-                      }}
-                      title="Delete this event"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
                     <span 
                       className="font-medium text-foreground cursor-pointer hover:bg-foreground/5 px-1 py-0.5 rounded transition-colors"
                       onClick={() => startEditingDate(fact.id)}
@@ -947,7 +948,8 @@ export default function ChronologyTable() {
                             if (e.key === 'Enter') handleDateSave(fact.id);
                           }}
                           autoFocus
-                          className="w-full text-sm px-3 py-2 bg-background border-2 border-foreground/30 rounded shadow-lg focus:border-foreground focus:outline-none"
+                          className="w-full text-sm px-1 py-0.5 bg-transparent"
+                          style={{ border: 'none', outline: 'none', boxShadow: 'none' }}
                         />
                       </div>
                     )}
@@ -981,8 +983,8 @@ export default function ChronologyTable() {
                             if (e.key === 'Escape') cancelDescriptionEdit();
                           }}
                           autoFocus
-                          className="min-h-[80px] text-sm resize-none bg-background border-2 border-foreground/30 rounded shadow-lg focus:border-foreground p-3"
-                          style={{ height: 'auto', minHeight: '80px' }}
+                          className="min-h-[80px] text-sm resize-none bg-transparent p-1"
+                          style={{ height: 'auto', minHeight: '80px', border: 'none', outline: 'none', boxShadow: 'none' }}
                         />
                       </div>
                     )}
@@ -1056,18 +1058,19 @@ export default function ChronologyTable() {
                       {/* Existing issue chips */}
                       <div className="flex flex-wrap gap-1">
                         {getIssueValue(fact).map((issue, idx) => (
-                          <span 
+                          <Badge
                             key={idx}
-                            className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
+                            variant="secondary"
+                            className="text-xs cursor-pointer hover:bg-[#E07A5F] hover:text-white transition-colors flex items-center gap-1"
                           >
                             {issue}
                             <button
                               onClick={() => handleRemoveIssue(fact.id, issue)}
-                              className="hover:bg-blue-200 rounded-full p-0.5"
+                              className="hover:opacity-70 p-0.5"
                             >
                               <X className="h-3 w-3" />
                             </button>
-                          </span>
+                          </Badge>
                         ))}
                       </div>
                       {/* Add new issue input */}
@@ -1083,8 +1086,8 @@ export default function ChronologyTable() {
                             }
                           }}
                           placeholder="Add issue..."
-                          className="flex-1 text-xs px-2 py-1 bg-transparent border-0 border-b border-transparent hover:border-foreground/20 focus:border-foreground/30 focus:outline-none transition-colors"
-                          style={{ width: '100%', maxWidth: '90%', minWidth: '80px', boxSizing: 'border-box', flexGrow: 1 }}
+                          className="flex-1 text-xs px-2 py-1 bg-transparent"
+                          style={{ width: '100%', maxWidth: '90%', minWidth: '80px', boxSizing: 'border-box', flexGrow: 1, border: 'none', outline: 'none', boxShadow: 'none' }}
                         />
                         <button
                           onClick={() => handleAddIssue(fact.id)}
@@ -1096,31 +1099,16 @@ export default function ChronologyTable() {
                     </div>
                   </td>
 
-                  {/* Comments Column - Editable with Floating Auto-Expanding Editor */}
-                  <td className="py-4 px-4 align-top relative" style={{ fontSize: '14px', wordWrap: 'break-word', overflowWrap: 'break-word' }}>
-                    <div 
-                      className="min-h-[60px] cursor-text text-sm text-foreground leading-relaxed"
-                      onClick={(e) => {
-                        // Only start editing if clicking the container, not the floating editor
-                        const target = e.target as HTMLElement;
-                        if (e.currentTarget === e.target || target.tagName !== 'TEXTAREA') {
-                          const textarea = e.currentTarget.querySelector('textarea');
-                          if (textarea) textarea.focus();
-                        }
-                      }}
-                    >
-                      {getCommentValue(fact) || 'Add comments...'}
-                    </div>
-                    <div className="absolute top-0 left-0 w-full z-40">
-                      <Textarea
-                        value={getCommentValue(fact)}
-                        onChange={(e) => handleCommentChange(fact.id, e.target.value)}
-                        onBlur={() => handleCommentSave(fact.id)}
-                        placeholder="Add comments..."
-                        className="min-h-[60px] text-sm resize-none bg-transparent border-0 border-b border-transparent hover:border-foreground/20 focus:border-foreground/30 p-3 transition-all focus:outline-none"
-                        style={{ height: 'auto', minHeight: '60px' }}
-                      />
-                    </div>
+                  {/* Comments Column - Single Textarea */}
+                  <td className="py-4 px-4 align-top" style={{ fontSize: '14px', wordWrap: 'break-word', overflowWrap: 'break-word' }}>
+                    <Textarea
+                      value={getCommentValue(fact)}
+                      onChange={(e) => handleCommentChange(fact.id, e.target.value)}
+                      onBlur={() => handleCommentSave(fact.id)}
+                      placeholder="Add comments..."
+                      className="min-h-[60px] w-full text-sm resize-none bg-transparent p-2"
+                      style={{ height: 'auto', minHeight: '60px', border: 'none', outline: 'none', boxShadow: 'none' }}
+                    />
                   </td>
                 </tr>
               ))}
