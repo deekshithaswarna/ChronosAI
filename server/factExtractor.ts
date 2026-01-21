@@ -65,7 +65,7 @@ FACT EXTRACTION - FOCUS ON:
 - Date: Exact date (calculate if relative like "the following day" or "two weeks later")
 - Time: Specific time if mentioned (e.g., "3:00 PM", "morning")
 - Actor: Who performed the action. IMPORTANT: If multiple people/entities are involved, list them as comma-separated values (e.g., "John Doe, Jane Smith, ABC Corp"). Each name should be a separate entity.
-- Event: DETAILED, COMPREHENSIVE SUMMARY. Do NOT be overly concise. Include key context, specific actions, and relevant details. Aim for 2-4 sentences that capture the full significance of the event. Include what happened, why it matters, and any important context or consequences.
+- Event: DETAILED, COMPREHENSIVE SUMMARY with FULL CONTEXT. CRITICAL: Always include the actor's name(s) in the description to make it self-contained. For example, write "Andrew Swarthout graduated from the University of Arizona" NOT just "Graduated from the University of Arizona". Do NOT be overly concise. Include key context, specific actions, and relevant details. Aim for 2-4 sentences that capture the full significance of the event. Include what happened, why it matters, and any important context or consequences.
 - Importance: Rate 1-10 (10 = critical legal event like filing, verdict; 1 = minor administrative)
 - Page Number: The page number where this event was found (look for [PAGE X] markers in the text)
 

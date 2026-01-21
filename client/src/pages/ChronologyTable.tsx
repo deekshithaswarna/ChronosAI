@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
-import { ArrowUpDown, Download, Filter, X, Plus, Pencil } from 'lucide-react';
+import { ArrowUpDown, Download, Filter, X, Plus, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
@@ -378,6 +378,24 @@ export default function ChronologyTable() {
     setEditingDescriptionId(null);
   };
 
+  // Delete fact mutation
+  const deleteFactMutation = trpc.facts.delete.useMutation();
+
+  // Handle fact deletion
+  const handleDeleteFact = async (factId: number) => {
+    if (!confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
+      return;
+    }
+    
+    try {
+      await deleteFactMutation.mutateAsync({ id: factId });
+      utils.facts.list.invalidate();
+    } catch (error) {
+      console.error('Failed to delete fact:', error);
+      alert('Failed to delete event. Please try again.');
+    }
+  };
+
   // Export to PDF with filtered data and user edits using jspdf-autotable
   const exportToPDF = () => {
     const doc = new jsPDF();
@@ -594,7 +612,7 @@ export default function ChronologyTable() {
             {/* Sticky Header */}
             <thead className="sticky top-0 z-10">
               <tr className="bg-foreground text-background">
-                <th className="p-4 text-left font-bold heading relative" style={{ width: '8%' }}>
+                <th className="p-4 text-left font-bold heading relative" style={{ width: '7%' }}>
                   <div className="flex items-center gap-2">
                     <span 
                       className="cursor-pointer hover:opacity-70 transition-opacity"
@@ -722,7 +740,7 @@ export default function ChronologyTable() {
                 </th>
                 <th 
                   className="p-4 text-left font-bold heading"
-                  style={{ width: '35%' }}
+                  style={{ width: '33%' }}
                 >
                   Event Description
                 </th>
@@ -758,7 +776,7 @@ export default function ChronologyTable() {
                     </div>
                   )}
                 </th>
-                <th className="p-4 text-left font-bold heading relative" style={{ width: '15%' }}>
+                <th className="p-4 text-left font-bold heading relative" style={{ width: '14%' }}>
                   <div className="flex items-center gap-2">
                     Actors
                     <button
@@ -830,8 +848,11 @@ export default function ChronologyTable() {
                     </div>
                   )}
                 </th>
-                <th className="p-4 text-left font-bold heading" style={{ width: '20%' }}>
+                <th className="p-4 text-left font-bold heading" style={{ width: '19%' }}>
                   Comments
+                </th>
+                <th className="p-4 text-center font-bold heading" style={{ width: '5%' }}>
+                  Actions
                 </th>
               </tr>
             </thead>
@@ -1003,6 +1024,17 @@ export default function ChronologyTable() {
                         className="min-h-[60px] text-sm resize-none border-muted focus:border-foreground/30"
                       />
                     </div>
+                  </td>
+
+                  {/* Actions Column - Delete button */}
+                  <td className="p-4 align-top text-center">
+                    <button
+                      onClick={() => handleDeleteFact(fact.id)}
+                      className="text-muted-foreground hover:text-red-600 transition-colors p-1 rounded hover:bg-red-50"
+                      title="Delete this event"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </td>
                 </tr>
               ))}

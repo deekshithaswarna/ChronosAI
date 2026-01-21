@@ -178,6 +178,16 @@ export const appRouter = router({
         await db.renamePersonInFacts(ctx.user.id, input.oldName, input.newName);
         return { success: true };
       }),
+
+    // Delete fact
+    delete: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.deleteFact(input.id, ctx.user.id);
+        return { success: true };
+      }),
   }),
 
   actors: router({

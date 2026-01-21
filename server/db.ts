@@ -235,6 +235,14 @@ export async function renamePersonInFacts(userId: number, oldName: string, newNa
   }
 }
 
+export async function deleteFact(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Delete fact only if it belongs to the user
+  await db.delete(facts).where(and(eq(facts.id, id), eq(facts.userId, userId)));
+}
+
 export async function deleteDocument(id: number, userId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");

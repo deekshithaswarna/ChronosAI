@@ -571,3 +571,21 @@
 - [x] Update AI extraction prompt to generate detailed, comprehensive summaries
 - [x] Enhance LLM prompt to include key context and specific actions (not overly concise)
 - [x] Changed Event prompt to request 2-4 sentence detailed summaries with context
+
+## Event Description Context & Row Deletion
+
+- [x] Update AI extraction prompt to include actor names in event descriptions
+- [x] Ensure event descriptions are self-contained (e.g., "Andrew Swarthout graduated..." not just "Graduated...")
+- [x] Added CRITICAL instruction to always include actor names in event descriptions
+- [x] Updated prompt with example: "Andrew Swarthout graduated from the University of Arizona" NOT just "Graduated from the University of Arizona"
+- [x] Add delete button to each table row
+- [x] Added Actions column (5% width) with Trash2 icon
+- [x] Delete button shows on hover with red color transition
+- [x] Implement delete confirmation (optional)
+- [x] Added browser confirm() dialog before deletion
+- [x] Create facts.delete tRPC mutation
+- [x] Added delete mutation to facts router with user ID verification
+- [x] Create deleteFact function in db.ts
+- [x] Implemented deleteFact with userId check for security
+- [x] Test row deletion functionality
+- [x] Adjusted column widths to accommodate Actions column (Date 7%, Description 33%, Actors 14%, Comments 19%)
