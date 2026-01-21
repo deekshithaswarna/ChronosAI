@@ -646,3 +646,23 @@
 - [x] Issue input has minWidth: 150px for full placeholder visibility
 - [x] Ensure tag inputs can overlap next cell slightly if needed for visibility
 - [x] Added z-50 to Person input for proper layering
+
+## Delete Column Relocation & Input Overflow Fix
+
+- [x] Create narrow column (40px) on far left for delete action
+- [x] Added delete column header (empty)
+- [x] Added delete column cell with 40px width
+- [x] Move trash icon from floating right position to left column
+- [x] Removed old floating delete icon on right side
+- [x] Keep "show on hover" logic for trash icon
+- [x] Trash icon appears in left column only when hoveredRowId matches
+- [x] Style trash icon with subtle grey (#9CA3AF)
+- [x] Add red hover effect (#EF4444) to trash icon
+- [x] Fix "Add issue..." input overflow in Issues column
+- [x] Apply box-sizing: border-box to input
+- [x] Set input width to 100% with proper constraints
+- [x] Add max-width: 90% if needed to prevent overflow
+- [x] Added maxWidth: 90% and boxSizing: border-box
+- [x] Ensure flex-wrap: wrap on container for proper line breaking
+- [x] Added flex-wrap to input container div
+- [x] Reduced minWidth from 150px to 120px for better fit

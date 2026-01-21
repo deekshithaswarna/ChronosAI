@@ -660,6 +660,10 @@ export default function ChronologyTable() {
             {/* Sticky Header */}
             <thead className="sticky top-0 z-10">
               <tr className="bg-foreground text-background">
+                {/* Delete Action Column */}
+                <th className="p-2 text-center" style={{ width: '40px' }}>
+                  {/* Empty header for delete column */}
+                </th>
                 <th className="p-4 text-left font-bold heading relative" style={{ width: '8%' }}>
                   <div className="flex items-center gap-2">
                     <span 
@@ -913,6 +917,18 @@ export default function ChronologyTable() {
                   onMouseEnter={() => setHoveredRowId(fact.id)}
                   onMouseLeave={() => setHoveredRowId(null)}
                 >
+                  {/* Delete Action Column */}
+                  <td className="py-2 px-2 align-middle text-center" style={{ width: '40px' }}>
+                    {hoveredRowId === fact.id && (
+                      <button
+                        onClick={() => handleDeleteFact(fact.id)}
+                        className="text-[#9CA3AF] hover:text-[#EF4444] transition-colors p-1 rounded"
+                        title="Delete this event"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </td>
                   {/* Date Column - Editable with Floating Editor */}
                   <td className="py-4 px-4 align-top relative" style={{ fontSize: '14px' }}>
                     <span 
@@ -1057,7 +1073,7 @@ export default function ChronologyTable() {
                         ))}
                       </div>
                       {/* Add new issue input */}
-                      <div className="flex gap-1 w-full">
+                      <div className="flex gap-1 w-full flex-wrap">
                         <input
                           type="text"
                           value={newIssueInputs[fact.id] || ''}
@@ -1070,7 +1086,7 @@ export default function ChronologyTable() {
                           }}
                           placeholder="Add issue..."
                           className="flex-1 text-xs px-2 py-1 border border-muted rounded focus:border-foreground/30 focus:outline-none"
-                          style={{ width: '100%', minWidth: '150px' }}
+                          style={{ width: '100%', maxWidth: '90%', minWidth: '120px', boxSizing: 'border-box' }}
                         />
                         <button
                           onClick={() => handleAddIssue(fact.id)}
@@ -1108,19 +1124,6 @@ export default function ChronologyTable() {
                       />
                     </div>
                   </td>
-
-                  {/* Floating Delete Icon - Appears on row hover */}
-                  {hoveredRowId === fact.id && (
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                      <button
-                        onClick={() => handleDeleteFact(fact.id)}
-                        className="text-muted-foreground hover:text-red-600 transition-colors p-2 rounded-full hover:bg-red-50 shadow-sm bg-background border border-border"
-                        title="Delete this event"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  )}
                 </tr>
               ))}
             </tbody>
