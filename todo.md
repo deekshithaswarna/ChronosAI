@@ -589,3 +589,34 @@
 - [x] Implemented deleteFact with userId check for security
 - [x] Test row deletion functionality
 - [x] Adjusted column widths to accommodate Actions column (Date 7%, Description 33%, Actors 14%, Comments 19%)
+
+## UI De-Cluttering & Date Logic
+
+- [x] Remove Actions column header and vertical grid line
+- [x] Move delete icon to hover-only state on each row
+- [x] Position delete icon at far right edge of row (floating/borderless)
+- [x] Added hoveredRowId state to track row hover
+- [x] Delete icon appears absolutely positioned on right side with rounded button style
+- [x] Fix Issues column with flex-wrap for tags and input
+- [x] Changed from max-h with overflow to flex-col with gap-2
+- [x] Tags wrap properly with flex-wrap
+- [x] Set "Add issue..." input to full width (100%)
+- [x] Added w-full and min-w-0 to input container
+- [x] Ensure Issues cell expands vertically to show all content
+- [x] Removed max-height constraint, cell now expands naturally
+- [x] Increase vertical padding in all table cells to 16px (top/bottom)
+- [x] Changed all td from p-4 to py-4 px-4
+- [x] Make Date cell editable with inline-edit pattern
+- [x] Added editingDateId state and date editing handlers
+- [x] Click date to edit with input[type="date"]
+- [x] Implement date editing with save on blur
+- [x] Added handleDateSave with blur and Enter key handlers
+- [x] Add auto-sorting logic when date is changed
+- [x] utils.facts.list.invalidate() triggers re-fetch and auto-sort
+- [x] Ensure row visually "jumps" to new chronological position after date edit
+- [x] Table re-renders with new sort order after invalidation
+- [x] Update eventDate field in database when date is edited
+- [x] Added eventDate to updateFact function
+- [x] Add date mutation to facts.update
+- [x] Added eventDate field to facts.update mutation schema
+- [x] Restored column widths after removing Actions column (Date 8%, Description 35%, Actors 15%, Comments 20%)

@@ -24,9 +24,12 @@ export default function ChronologyTable() {
   const [editedIssues, setEditedIssues] = useState<Record<number, string[]>>({});
   const [editedComments, setEditedComments] = useState<Record<number, string>>({});
   const [editedDescriptions, setEditedDescriptions] = useState<Record<number, string>>({});
+  const [editedDates, setEditedDates] = useState<Record<number, string>>({});
   const [newIssueInputs, setNewIssueInputs] = useState<Record<number, string>>({});
   const [editingDescriptionId, setEditingDescriptionId] = useState<number | null>(null);
+  const [editingDateId, setEditingDateId] = useState<number | null>(null);
   const [hoveredDescriptionId, setHoveredDescriptionId] = useState<number | null>(null);
+  const [hoveredRowId, setHoveredRowId] = useState<number | null>(null);
   
   // State for inline person editing
   const [editingPerson, setEditingPerson] = useState<string | null>(null);
@@ -396,6 +399,51 @@ export default function ChronologyTable() {
     }
   };
 
+  // Get current value for Date (edited or original)
+  const getDateValue = (fact: any) => {
+    if (editedDates[fact.id] !== undefined) {
+      return editedDates[fact.id];
+    }
+    // Format as YYYY-MM-DD for input[type="date"]
+    return new Date(fact.eventDate).toISOString().split('T')[0];
+  };
+
+  // Handle Date field change
+  const handleDateChange = (factId: number, value: string) => {
+    setEditedDates(prev => ({ ...prev, [factId]: value }));
+  };
+
+  // Save Date field on blur with auto-sorting
+  const handleDateSave = async (factId: number) => {
+    const newDateValue = editedDates[factId];
+    if (newDateValue !== undefined) {
+      try {
+        // Convert YYYY-MM-DD to Date object
+        const newDate = new Date(newDateValue);
+        await updateFactMutation.mutateAsync({
+          id: factId,
+          eventDate: newDate.toISOString(),
+        });
+        // Invalidate to trigger re-fetch and auto-sort
+        utils.facts.list.invalidate();
+        setEditingDateId(null);
+      } catch (error) {
+        console.error('Failed to update date:', error);
+        alert('Failed to update date. Please try again.');
+      }
+    }
+  };
+
+  // Start editing Date
+  const startEditingDate = (factId: number) => {
+    setEditingDateId(factId);
+  };
+
+  // Cancel editing Date
+  const cancelDateEdit = () => {
+    setEditingDateId(null);
+  };
+
   // Export to PDF with filtered data and user edits using jspdf-autotable
   const exportToPDF = () => {
     const doc = new jsPDF();
@@ -612,7 +660,7 @@ export default function ChronologyTable() {
             {/* Sticky Header */}
             <thead className="sticky top-0 z-10">
               <tr className="bg-foreground text-background">
-                <th className="p-4 text-left font-bold heading relative" style={{ width: '7%' }}>
+                <th className="p-4 text-left font-bold heading relative" style={{ width: '8%' }}>
                   <div className="flex items-center gap-2">
                     <span 
                       className="cursor-pointer hover:opacity-70 transition-opacity"
@@ -740,7 +788,7 @@ export default function ChronologyTable() {
                 </th>
                 <th 
                   className="p-4 text-left font-bold heading"
-                  style={{ width: '33%' }}
+                  style={{ width: '35%' }}
                 >
                   Event Description
                 </th>
@@ -776,7 +824,7 @@ export default function ChronologyTable() {
                     </div>
                   )}
                 </th>
-                <th className="p-4 text-left font-bold heading relative" style={{ width: '14%' }}>
+                <th className="p-4 text-left font-bold heading relative" style={{ width: '15%' }}>
                   <div className="flex items-center gap-2">
                     Actors
                     <button
@@ -848,11 +896,8 @@ export default function ChronologyTable() {
                     </div>
                   )}
                 </th>
-                <th className="p-4 text-left font-bold heading" style={{ width: '19%' }}>
+                <th className="p-4 text-left font-bold heading" style={{ width: '20%' }}>
                   Comments
-                </th>
-                <th className="p-4 text-center font-bold heading" style={{ width: '5%' }}>
-                  Actions
                 </th>
               </tr>
             </thead>
@@ -862,20 +907,40 @@ export default function ChronologyTable() {
               {filteredAndSortedFacts.map((fact, index) => (
                 <tr 
                   key={fact.id}
-                  className={`border-t border-foreground/10 hover:bg-foreground/5 transition-colors ${
+                  className={`relative border-t border-foreground/10 hover:bg-foreground/5 transition-colors ${
                     index % 2 === 0 ? 'bg-transparent' : 'bg-foreground/[0.02]'
                   }`}
+                  onMouseEnter={() => setHoveredRowId(fact.id)}
+                  onMouseLeave={() => setHoveredRowId(null)}
                 >
-                  {/* Date Column */}
-                  <td className="p-4 align-top" style={{ fontSize: '14px' }}>
-                    <span className="font-medium text-foreground">
-                      {formatDate(fact.eventDate)}
-                    </span>
+                  {/* Date Column - Editable */}
+                  <td className="py-4 px-4 align-top" style={{ fontSize: '14px' }}>
+                    {editingDateId === fact.id ? (
+                      <input
+                        type="date"
+                        value={getDateValue(fact)}
+                        onChange={(e) => handleDateChange(fact.id, e.target.value)}
+                        onBlur={() => handleDateSave(fact.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Escape') cancelDateEdit();
+                          if (e.key === 'Enter') handleDateSave(fact.id);
+                        }}
+                        autoFocus
+                        className="w-full text-sm px-2 py-1 border border-muted rounded focus:border-foreground/30 focus:outline-none"
+                      />
+                    ) : (
+                      <span 
+                        className="font-medium text-foreground cursor-pointer hover:bg-foreground/5 px-1 py-0.5 rounded transition-colors"
+                        onClick={() => startEditingDate(fact.id)}
+                      >
+                        {formatDate(fact.eventDate)}
+                      </span>
+                    )}
                   </td>
 
                   {/* Event Description Column - Editable */}
                   <td 
-                    className="p-4 align-top" 
+                    className="py-4 px-4 align-top" 
                     style={{ fontSize: '14px', wordWrap: 'break-word', overflowWrap: 'break-word' }}
                     onMouseEnter={() => setHoveredDescriptionId(fact.id)}
                     onMouseLeave={() => setHoveredDescriptionId(null)}
@@ -907,7 +972,7 @@ export default function ChronologyTable() {
                   </td>
 
                   {/* Source Column */}
-                  <td className="p-4 align-top" style={{ fontSize: '14px' }}>
+                  <td className="py-4 px-4 align-top" style={{ fontSize: '14px' }}>
                     <div className="text-sm">
                       <a 
                         href={fact.documentUrl || '#'} 
@@ -927,7 +992,7 @@ export default function ChronologyTable() {
                   </td>
 
                   {/* Actors Column - Split into individual tags */}
-                  <td className="p-4 align-top" style={{ fontSize: '14px', whiteSpace: 'normal', wordWrap: 'break-word' }}>
+                  <td className="py-4 px-4 align-top" style={{ fontSize: '14px', whiteSpace: 'normal', wordWrap: 'break-word' }}>
                     <div className="flex flex-wrap gap-1">
                       {fact.actor && fact.actor.split(/[,;]/).map((person, idx) => {
                         const trimmed = person.trim();
@@ -969,8 +1034,8 @@ export default function ChronologyTable() {
                   </td>
 
                   {/* Issues Column - Multi-tag with chips */}
-                  <td className="p-4 align-top" style={{ fontSize: '14px' }}>
-                    <div className="max-h-[100px] overflow-y-auto space-y-2">
+                  <td className="py-4 px-4 align-top" style={{ fontSize: '14px' }}>
+                    <div className="flex flex-col gap-2">
                       {/* Existing issue chips */}
                       <div className="flex flex-wrap gap-1">
                         {getIssueValue(fact).map((issue, idx) => (
@@ -989,7 +1054,7 @@ export default function ChronologyTable() {
                         ))}
                       </div>
                       {/* Add new issue input */}
-                      <div className="flex gap-1">
+                      <div className="flex gap-1 w-full">
                         <input
                           type="text"
                           value={newIssueInputs[fact.id] || ''}
@@ -1001,11 +1066,12 @@ export default function ChronologyTable() {
                             }
                           }}
                           placeholder="Add issue..."
-                          className="flex-1 text-xs px-2 py-1 border border-muted rounded focus:border-foreground/30 focus:outline-none"
+                          className="flex-1 min-w-0 text-xs px-2 py-1 border border-muted rounded focus:border-foreground/30 focus:outline-none"
+                          style={{ width: '100%' }}
                         />
                         <button
                           onClick={() => handleAddIssue(fact.id)}
-                          className="px-2 py-1 bg-foreground text-background rounded hover:bg-foreground/90 text-xs"
+                          className="flex-shrink-0 px-2 py-1 bg-foreground text-background rounded hover:bg-foreground/90 text-xs"
                         >
                           <Plus className="h-3 w-3" />
                         </button>
@@ -1014,7 +1080,7 @@ export default function ChronologyTable() {
                   </td>
 
                   {/* Comments Column - Editable with scrollbar */}
-                  <td className="p-4 align-top" style={{ fontSize: '14px', wordWrap: 'break-word', overflowWrap: 'break-word' }}>
+                  <td className="py-4 px-4 align-top" style={{ fontSize: '14px', wordWrap: 'break-word', overflowWrap: 'break-word' }}>
                     <div className="max-h-[100px] overflow-y-auto">
                       <Textarea
                         value={getCommentValue(fact)}
@@ -1026,16 +1092,18 @@ export default function ChronologyTable() {
                     </div>
                   </td>
 
-                  {/* Actions Column - Delete button */}
-                  <td className="p-4 align-top text-center">
-                    <button
-                      onClick={() => handleDeleteFact(fact.id)}
-                      className="text-muted-foreground hover:text-red-600 transition-colors p-1 rounded hover:bg-red-50"
-                      title="Delete this event"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </td>
+                  {/* Floating Delete Icon - Appears on row hover */}
+                  {hoveredRowId === fact.id && (
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                      <button
+                        onClick={() => handleDeleteFact(fact.id)}
+                        className="text-muted-foreground hover:text-red-600 transition-colors p-2 rounded-full hover:bg-red-50 shadow-sm bg-background border border-border"
+                        title="Delete this event"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
                 </tr>
               ))}
             </tbody>

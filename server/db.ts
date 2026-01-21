@@ -199,17 +199,23 @@ export async function getDocumentFacts(documentId: number) {
   
   return db.select().from(facts).where(eq(facts.documentId, documentId)).orderBy(facts.eventDate);
 }
-export async function updateFact(id: number, updates: { userIssues?: string[]; comments?: string; summary?: string }) {
+export async function updateFact(id: number, updates: { userIssues?: string[]; comments?: string; summary?: string; eventDate?: Date }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
+  const updateData: any = {
+    userIssues: updates.userIssues,
+    comments: updates.comments,
+    summary: updates.summary,
+    updatedAt: new Date()
+  };
+  
+  if (updates.eventDate !== undefined) {
+    updateData.eventDate = updates.eventDate;
+  }
+  
   await db.update(facts)
-    .set({ 
-      userIssues: updates.userIssues,
-      comments: updates.comments,
-      summary: updates.summary,
-      updatedAt: new Date()
-    })
+    .set(updateData)
     .where(eq(facts.id, id));
 }
 

@@ -158,12 +158,14 @@ export const appRouter = router({
         userIssues: z.array(z.string()).optional(),
         comments: z.string().optional(),
         summary: z.string().optional(),
+        eventDate: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         await db.updateFact(input.id, {
           userIssues: input.userIssues,
           comments: input.comments,
           summary: input.summary,
+          eventDate: input.eventDate ? new Date(input.eventDate) : undefined,
         });
         return { success: true };
       }),
