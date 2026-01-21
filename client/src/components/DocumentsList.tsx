@@ -52,7 +52,14 @@ export function DocumentsList() {
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
-                  <h4 className="font-semibold text-sm truncate">{doc.originalFilename}</h4>
+                  <a 
+                    href={doc.s3Url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="font-semibold text-sm hover:text-[#E07A5F] hover:underline transition-colors"
+                  >
+                    {doc.documentTitle || doc.originalFilename}
+                  </a>
                   <p className="text-xs text-muted-foreground mt-1">
                     Uploaded {formatDistanceToNow(new Date(doc.createdAt), { addSuffix: true })}
                   </p>

@@ -123,12 +123,12 @@ export const appRouter = router({
     update: protectedProcedure
       .input(z.object({
         id: z.number(),
-        userIssue: z.string().optional(),
+        userIssues: z.array(z.string()).optional(),
         comments: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        await db.updateFact(input.id, ctx.user.id, {
-          userIssue: input.userIssue,
+        await db.updateFact(input.id, {
+          userIssues: input.userIssues,
           comments: input.comments,
         });
         return { success: true };

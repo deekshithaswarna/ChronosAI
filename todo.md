@@ -243,3 +243,51 @@
 - [x] Word export uses proper table formatting with bold headers
 - [x] Both exports use filteredAndSortedFacts to respect current filters
 - [x] Both exports use getIssueValue() and getCommentValue() to include user edits
+
+## Final UI Polish - Sleek & Minimal Theme
+- [x] Change entire app background to flat #F9F9F4 (Light Beige)
+- [x] Remove all white card containers (upload box, table container, header cards)
+- [x] Remove black divider line under CHRONOS logo in navigation
+- [x] Ensure navigation links are plain text (Black default, Terracotta hover)
+
+## Upload Page Advanced Refinement
+- [x] Remove outer border box around upload area
+- [x] Remove "Upload Legal Documents" heading
+- [x] Keep only dashed dropzone with "Upload Documents" button and file support text
+- [x] Display uploaded files using Smart Title (not filename)
+- [x] Make Smart Title a clickable link that opens document in new tab
+
+## Chronology Table Structure Updates
+- [x] Adjust column widths: Persons 12%, Issues 15%, Comments 15%, Description expands
+- [ ] Display Smart Title + Page Number in Source column (e.g., "Title p. 14")
+- [x] Make Source text a hyperlink to the document
+- [x] Added documentUrl to getUserFacts query
+- [x] Source column now opens document in new tab on click
+## Advanced Cell Logic
+- [x] Split Persons column into individual tags (not grouped string)
+- [x] Convert Issues column to multi-issue with removeable chips
+- [x] Add text input with "+" button below chips to add new issues
+- [x] Apply max-height: 100px with overflow-y: auto to Issues cells
+- [x] Apply max-height: 100px with overflow-y: auto to Comments cells
+- [x] Changed userIssues database field to JSON array
+- [x] Updated tRPC mutation to accept userIssues array
+- [x] Implemented handleAddIssue and handleRemoveIssue functions
+- [x] Added newIssueInputs state for input fields
+- [x] Person tags split by comma/semicolon with trim height
+- [ ] Store issues as array in d## Enhanced Filtering Logic
+- [x] Update Person filter to handle individual tags with OR logic
+- [x] Update Issue filter to match Person logic (OR for multiple selections)
+- [x] Populate Issue filter dropdown with all unique user-created issue tags
+- [x] uniquePersons now splits actors by comma/semicolon
+- [x] uniqueIssues includes both AI-extracted and user-added issues
+- [x] Person filtering uses Array.some() for OR logic
+- [x] Issue filtering uses Array.some() for OR logic## PDF Export with jspdf-autotable
+- [x] Install jspdf-autotable package
+- [x] Replace custom PDF export with jspdf-autotable
+- [x] Enable text wrapping for all columns
+- [x] Include all user-generated comments and issues
+- [x] Respect current active filters (only export visible rows)
+- [x] Added autoTable import
+- [x] Configured column widths for optimal layout
+- [x] Set overflow: 'linebreak' for text wrapping
+- [x] Black header with white text styling

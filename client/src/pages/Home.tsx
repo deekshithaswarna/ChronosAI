@@ -11,23 +11,15 @@ export default function Home() {
 
   return (
     <div className="container py-12 max-w-6xl">
-      {/* Upload Section - Centered with white card */}
+      {/* Upload Section - No container */}
       <section className="mb-12">
-        <div className="bg-card rounded-lg shadow-md p-8 border border-foreground/10">
-          <h2 className="text-2xl font-bold heading mb-2">Upload Legal Documents</h2>
-          <p className="text-sm text-muted-foreground mb-6">
-            Upload PDF, Word, or text files to generate a structured chronology
-          </p>
-          <FileUpload onUploadComplete={handleUploadComplete} />
-        </div>
+        <FileUpload onUploadComplete={handleUploadComplete} />
       </section>
 
       {/* Recent Uploads Section */}
       <section>
-        <div className="bg-card rounded-lg shadow-md p-8 border border-foreground/10">
-          <h2 className="text-2xl font-bold heading mb-6">Recent Uploads</h2>
-          <DocumentsList key={refreshKey} />
-        </div>
+        <h2 className="text-2xl font-bold heading mb-6">Recent Uploads</h2>
+        <DocumentsList key={refreshKey} />
       </section>
     </div>
   );

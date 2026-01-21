@@ -1,11 +1,12 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
-import { ArrowUpDown, Download, Filter } from 'lucide-react';
+import { ArrowUpDown, Download, Filter, X, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { Document, Packer, Paragraph, Table, TableCell, TableRow, TextRun, WidthType, AlignmentType, BorderStyle } from 'docx';
 
 type SortField = 'date' | 'event' | 'source';
@@ -20,8 +21,9 @@ export default function ChronologyTable() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   
   // Local state for editable fields (persists across sorting)
-  const [editedIssues, setEditedIssues] = useState<Record<number, string>>({});
+  const [editedIssues, setEditedIssues] = useState<Record<number, string[]>>({});
   const [editedComments, setEditedComments] = useState<Record<number, string>>({});
+  const [newIssueInputs, setNewIssueInputs] = useState<Record<number, string>>({});
 
   // Filter state
   const [selectedPersons, setSelectedPersons] = useState<string[]>([]);
@@ -53,7 +55,13 @@ export default function ChronologyTable() {
     if (!facts) return [];
     const persons = new Set<string>();
     facts.forEach(fact => {
-      if (fact.actor) persons.add(fact.actor);
+      if (fact.actor) {
+        // Split by comma or semicolon and add each person as separate tag
+        fact.actor.split(/[,;]/).forEach(person => {
+          const trimmed = person.trim();
+          if (trimmed) persons.add(trimmed);
+        });
+      }
     });
     return Array.from(persons).sort();
   }, [facts]);
@@ -63,7 +71,9 @@ export default function ChronologyTable() {
     const issues = new Set<string>();
     facts.forEach(fact => {
       if (fact.issue) issues.add(fact.issue);
-      if (fact.userIssue) issues.add(fact.userIssue);
+      if (fact.userIssues && Array.isArray(fact.userIssues)) {
+        fact.userIssues.forEach(issue => issues.add(issue));
+      }
     });
     return Array.from(issues).sort();
   }, [facts]);
@@ -75,13 +85,21 @@ export default function ChronologyTable() {
     // Apply filters
     let filtered = facts;
     if (selectedPersons.length > 0) {
-      filtered = filtered.filter(f => f.actor && selectedPersons.includes(f.actor));
+      filtered = filtered.filter(f => {
+        if (!f.actor) return false;
+        // Split actor into individual persons and check if any match (OR logic)
+        const persons = f.actor.split(/[,;]/).map(p => p.trim());
+        return persons.some(person => selectedPersons.includes(person));
+      });
     }
     if (selectedIssues.length > 0) {
-      filtered = filtered.filter(f => 
-        (f.issue && selectedIssues.includes(f.issue)) ||
-        (f.userIssue && selectedIssues.includes(f.userIssue))
-      );
+      filtered = filtered.filter(f => {
+        if (f.issue && selectedIssues.includes(f.issue)) return true;
+        if (f.userIssues && Array.isArray(f.userIssues)) {
+          return f.userIssues.some(issue => selectedIssues.includes(issue));
+        }
+        return false;
+      });
     }
 
     // Apply sorting
@@ -141,9 +159,9 @@ export default function ChronologyTable() {
     setSelectedIssues([]);
   };
 
-  // Handle Issues field change
-  const handleIssueChange = (factId: number, value: string) => {
-    setEditedIssues(prev => ({ ...prev, [factId]: value }));
+  // Handle new issue input change
+  const handleNewIssueInputChange = (factId: number, value: string) => {
+    setNewIssueInputs(prev => ({ ...prev, [factId]: value }));
   };
 
   // Handle Comments field change
@@ -151,16 +169,36 @@ export default function ChronologyTable() {
     setEditedComments(prev => ({ ...prev, [factId]: value }));
   };
 
-  // Save Issues field on blur
-  const handleIssueSave = async (factId: number) => {
-    const newValue = editedIssues[factId];
-    if (newValue !== undefined) {
-      await updateFactMutation.mutateAsync({
-        id: factId,
-        userIssue: newValue,
-      });
-      utils.facts.list.invalidate();
-    }
+  // Add new issue tag
+  const handleAddIssue = async (factId: number) => {
+    const newIssue = newIssueInputs[factId]?.trim();
+    if (!newIssue) return;
+    
+    const currentIssues = getIssueValue({ id: factId, ...facts?.find(f => f.id === factId) });
+    const updatedIssues = [...currentIssues, newIssue];
+    
+    setEditedIssues(prev => ({ ...prev, [factId]: updatedIssues }));
+    setNewIssueInputs(prev => ({ ...prev, [factId]: '' }));
+    
+    await updateFactMutation.mutateAsync({
+      id: factId,
+      userIssues: updatedIssues,
+    });
+    utils.facts.list.invalidate();
+  };
+
+  // Remove issue tag
+  const handleRemoveIssue = async (factId: number, issueToRemove: string) => {
+    const currentIssues = getIssueValue({ id: factId, ...facts?.find(f => f.id === factId) });
+    const updatedIssues = currentIssues.filter(issue => issue !== issueToRemove);
+    
+    setEditedIssues(prev => ({ ...prev, [factId]: updatedIssues }));
+    
+    await updateFactMutation.mutateAsync({
+      id: factId,
+      userIssues: updatedIssues,
+    });
+    utils.facts.list.invalidate();
   };
 
   // Save Comments field on blur
@@ -175,12 +213,20 @@ export default function ChronologyTable() {
     }
   };
 
-  // Get current value for Issues (edited or original)
-  const getIssueValue = (fact: any) => {
+  // Get current value for Issues (edited or original) - returns array
+  const getIssueValue = (fact: any): string[] => {
     if (editedIssues[fact.id] !== undefined) {
-      return editedIssues[fact.id];
+      // editedIssues now stores arrays
+      return Array.isArray(editedIssues[fact.id]) ? editedIssues[fact.id] : [];
     }
-    return fact.userIssue || fact.issue || '';
+    // Return userIssues array or convert issue to array
+    if (fact.userIssues && Array.isArray(fact.userIssues)) {
+      return fact.userIssues;
+    }
+    if (fact.issue) {
+      return [fact.issue];
+    }
+    return [];
   };
 
   // Get current value for Comments (edited or original)
@@ -191,7 +237,7 @@ export default function ChronologyTable() {
     return fact.comments || '';
   };
 
-  // Export to PDF with filtered data and user edits
+  // Export to PDF with filtered data and user edits using jspdf-autotable
   const exportToPDF = () => {
     const doc = new jsPDF();
     
@@ -204,53 +250,46 @@ export default function ChronologyTable() {
     doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
     doc.text(`Total Events: ${filteredAndSortedFacts.length}`, 14, 34);
     
-    // Table headers
-    let yPos = 45;
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Date', 14, yPos);
-    doc.text('Event', 40, yPos);
-    doc.text('Source', 120, yPos);
-    doc.text('Person', 160, yPos);
-    
-    yPos += 5;
-    doc.line(14, yPos, 195, yPos);
-    yPos += 5;
-    
-    // Table rows
-    doc.setFont('helvetica', 'normal');
-    filteredAndSortedFacts.forEach((fact) => {
-      if (yPos > 270) {
-        doc.addPage();
-        yPos = 20;
-      }
-      
-      const date = formatDate(fact.eventDate);
-      const event = fact.summary.substring(0, 60) + (fact.summary.length > 60 ? '...' : '');
-      const source = (fact.documentTitle || fact.documentName || 'Unknown').substring(0, 30);
-      const person = fact.actor || '-';
-      
-      doc.text(date, 14, yPos);
-      doc.text(event, 40, yPos);
-      doc.text(source, 120, yPos);
-      doc.text(person, 160, yPos);
-      
-      // Add user-edited issues and comments if present
+    // Prepare table data
+    const tableData = filteredAndSortedFacts.map(fact => {
       const issues = getIssueValue(fact);
       const comments = getCommentValue(fact);
       
-      if (issues || comments) {
-        yPos += 4;
-        doc.setFontSize(8);
-        doc.setTextColor(100, 100, 100);
-        if (issues) doc.text(`Issues: ${issues.substring(0, 80)}`, 40, yPos);
-        yPos += 3;
-        if (comments) doc.text(`Comments: ${comments.substring(0, 80)}`, 40, yPos);
-        doc.setTextColor(0, 0, 0);
-        doc.setFontSize(9);
-      }
-      
-      yPos += 8;
+      return [
+        formatDate(fact.eventDate),
+        fact.summary,
+        fact.documentTitle || fact.documentName || 'Unknown',
+        fact.actor || '-',
+        issues && issues.length > 0 ? issues.join(', ') : '-',
+        comments || '-'
+      ];
+    });
+    
+    // Generate table with autoTable
+    autoTable(doc, {
+      startY: 40,
+      head: [['Date', 'Event Description', 'Source', 'Persons', 'Issues', 'Comments']],
+      body: tableData,
+      styles: {
+        fontSize: 8,
+        cellPadding: 2,
+        overflow: 'linebreak',
+        cellWidth: 'wrap'
+      },
+      headStyles: {
+        fillColor: [0, 0, 0],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold'
+      },
+      columnStyles: {
+        0: { cellWidth: 20 },  // Date
+        1: { cellWidth: 50 },  // Event Description
+        2: { cellWidth: 35 },  // Source
+        3: { cellWidth: 25 },  // Persons
+        4: { cellWidth: 30 },  // Issues
+        5: { cellWidth: 30 }   // Comments
+      },
+      margin: { top: 40, left: 14, right: 14 }
     });
     
     doc.save('chronology.pdf');
@@ -311,7 +350,7 @@ export default function ChronologyTable() {
               children: [new Paragraph(fact.actor || '-')],
             }),
             new TableCell({
-              children: [new Paragraph(issues || '-')],
+              children: [new Paragraph(issues && issues.length > 0 ? issues.join(', ') : '-')],
             }),
           ],
         })
@@ -355,9 +394,7 @@ export default function ChronologyTable() {
   if (isLoading) {
     return (
       <div className="container py-12">
-        <div className="bg-card rounded-lg shadow-md p-8 border border-foreground/10">
-          <p className="text-center text-muted-foreground">Loading chronology...</p>
-        </div>
+        <p className="text-center text-muted-foreground">Loading chronology...</p>
       </div>
     );
   }
@@ -365,11 +402,9 @@ export default function ChronologyTable() {
   if (!facts || facts.length === 0) {
     return (
       <div className="container py-12">
-        <div className="bg-card rounded-lg shadow-md p-8 border border-foreground/10">
-          <p className="text-center text-muted-foreground">
-            No events found. Upload documents to generate a chronology.
-          </p>
-        </div>
+        <p className="text-center text-muted-foreground">
+          No events found. Upload documents to generate a chronology.
+        </p>
       </div>
     );
   }
@@ -379,7 +414,7 @@ export default function ChronologyTable() {
   return (
     <div className="container py-12">
       {/* Header with Export Buttons */}
-      <div className="bg-card rounded-lg shadow-md p-6 border border-foreground/10 mb-6">
+      <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold heading">Chronology</h1>
@@ -481,7 +516,7 @@ export default function ChronologyTable() {
                     </div>
                   )}
                 </th>
-                <th className="w-[18%] p-4 text-left font-bold heading relative">
+                <th className="w-[15%] p-4 text-left font-bold heading relative">
                   <div className="flex items-center gap-2">
                     Issues
                     <button
@@ -517,7 +552,7 @@ export default function ChronologyTable() {
                     </div>
                   )}
                 </th>
-                <th className="w-[18%] p-4 text-left font-bold heading">
+                <th className="w-[15%] p-4 text-left font-bold heading">
                   Comments
                 </th>
               </tr>
@@ -549,9 +584,14 @@ export default function ChronologyTable() {
                   {/* Source Column */}
                   <td className="p-4 align-top">
                     <div className="text-sm">
-                      <div className="font-semibold text-foreground">
+                      <a 
+                        href={fact.documentUrl || '#'} 
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-semibold text-foreground hover:text-[#E07A5F] hover:underline transition-colors"
+                      >
                         {fact.documentTitle || fact.documentName || 'Unknown'}
-                      </div>
+                      </a>
                       {fact.citation && (
                         <div className="text-muted-foreground mt-1 text-xs">
                           {fact.citation}
@@ -560,37 +600,77 @@ export default function ChronologyTable() {
                     </div>
                   </td>
 
-                  {/* Persons Column */}
+                  {/* Persons Column - Split into individual tags */}
                   <td className="p-4 align-top">
                     <div className="flex flex-wrap gap-1">
-                      {fact.actor && (
-                        <Badge variant="secondary" className="text-xs">
-                          {fact.actor}
-                        </Badge>
-                      )}
+                      {fact.actor && fact.actor.split(/[,;]/).map((person, idx) => {
+                        const trimmed = person.trim();
+                        if (!trimmed) return null;
+                        return (
+                          <Badge key={idx} variant="secondary" className="text-xs">
+                            {trimmed}
+                          </Badge>
+                        );
+                      })}
                     </div>
                   </td>
 
-                  {/* Issues Column - Editable */}
+                  {/* Issues Column - Multi-tag with chips */}
                   <td className="p-4 align-top">
-                    <Textarea
-                      value={getIssueValue(fact)}
-                      onChange={(e) => handleIssueChange(fact.id, e.target.value)}
-                      onBlur={() => handleIssueSave(fact.id)}
-                      placeholder="Add issues..."
-                      className="min-h-[60px] text-sm resize-none border-muted focus:border-foreground/30"
-                    />
+                    <div className="max-h-[100px] overflow-y-auto space-y-2">
+                      {/* Existing issue chips */}
+                      <div className="flex flex-wrap gap-1">
+                        {getIssueValue(fact).map((issue, idx) => (
+                          <span 
+                            key={idx}
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
+                          >
+                            {issue}
+                            <button
+                              onClick={() => handleRemoveIssue(fact.id, issue)}
+                              className="hover:bg-blue-200 rounded-full p-0.5"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                      {/* Add new issue input */}
+                      <div className="flex gap-1">
+                        <input
+                          type="text"
+                          value={newIssueInputs[fact.id] || ''}
+                          onChange={(e) => handleNewIssueInputChange(fact.id, e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddIssue(fact.id);
+                            }
+                          }}
+                          placeholder="Add issue..."
+                          className="flex-1 text-xs px-2 py-1 border border-muted rounded focus:border-foreground/30 focus:outline-none"
+                        />
+                        <button
+                          onClick={() => handleAddIssue(fact.id)}
+                          className="px-2 py-1 bg-foreground text-background rounded hover:bg-foreground/90 text-xs"
+                        >
+                          <Plus className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
                   </td>
 
-                  {/* Comments Column - Editable */}
+                  {/* Comments Column - Editable with scrollbar */}
                   <td className="p-4 align-top">
-                    <Textarea
-                      value={getCommentValue(fact)}
-                      onChange={(e) => handleCommentChange(fact.id, e.target.value)}
-                      onBlur={() => handleCommentSave(fact.id)}
-                      placeholder="Add comments..."
-                      className="min-h-[60px] text-sm resize-none border-muted focus:border-foreground/30"
-                    />
+                    <div className="max-h-[100px] overflow-y-auto">
+                      <Textarea
+                        value={getCommentValue(fact)}
+                        onChange={(e) => handleCommentChange(fact.id, e.target.value)}
+                        onBlur={() => handleCommentSave(fact.id)}
+                        placeholder="Add comments..."
+                        className="min-h-[60px] text-sm resize-none border-muted focus:border-foreground/30"
+                      />
+                    </div>
                   </td>
                 </tr>
               ))}

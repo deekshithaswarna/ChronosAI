@@ -106,17 +106,14 @@ export function FileUpload({ onUploadComplete }: { onUploadComplete?: () => void
       >
         <input {...getInputProps()} />
         <div className="flex flex-col items-center gap-4">
-          <div className={`rounded-none p-4 border border-foreground ${isDragActive ? 'bg-accent' : 'bg-muted'}`}>
-            <Upload className={`h-8 w-8 text-foreground`} />
-          </div>
-          <div>
-            <p className="text-lg font-bold heading text-foreground">
-              {isDragActive ? 'Drop files here' : 'Upload legal bundles to generate chronology'}
-            </p>
-            <p className="text-sm text-muted-foreground mt-1">
-              or click to browse
-            </p>
-          </div>
+          <Button 
+            type="button" 
+            variant="default" 
+            className="bg-foreground text-background hover:bg-foreground/90"
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Upload Documents
+          </Button>
           <div className="text-xs text-muted-foreground">
             Supports PDF, Word (.docx, .doc), and Text files (max 50MB)
           </div>

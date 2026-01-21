@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, datetime, boolean } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, datetime, boolean, json } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -58,7 +58,7 @@ export const facts = mysqlTable("facts", {
   // Categorization
   actor: varchar("actor", { length: 255 }), // Person/entity involved
   issue: varchar("issue", { length: 255 }), // AI-extracted legal issue category
-  userIssue: text("userIssue"), // User-editable issue tags
+  userIssues: json("userIssues").$type<string[]>(), // User-editable issue tags as array
   citation: text("citation"), // Legal citation if present
   comments: text("comments"), // User-editable comments
   

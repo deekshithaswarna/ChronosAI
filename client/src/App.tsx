@@ -12,9 +12,9 @@ function Router() {
   const [location] = useLocation();
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#F9F9F4' }}>
       {/* Header with Logo */}
-      <header className="border-b border-foreground/20 bg-card">
+      <header style={{ backgroundColor: '#F9F9F4' }}>
         <div className="container mx-auto py-6">
           <div className="flex items-center gap-3">
             <Hourglass className="h-10 w-10" strokeWidth={1.5} />
@@ -27,7 +27,7 @@ function Router() {
       </header>
 
       {/* Navigation Bar */}
-      <nav className="border-b border-foreground/10 bg-background">
+      <nav style={{ backgroundColor: '#F9F9F4' }}>
         <div className="container mx-auto">
           <div className="flex justify-center gap-12 py-4">
             <Link
@@ -35,7 +35,7 @@ function Router() {
               className={`text-base font-medium transition-colors ${
                 location === "/"
                   ? "font-bold border-b-2 border-foreground pb-1"
-                  : "text-foreground hover:text-[#2C3E50]"
+                  : "text-foreground hover:text-[#E07A5F]"
               }`}
             >
               Upload Documents
@@ -45,7 +45,7 @@ function Router() {
               className={`text-base font-medium transition-colors ${
                 location === "/chronology"
                   ? "font-bold border-b-2 border-foreground pb-1"
-                  : "text-foreground hover:text-[#2C3E50]"
+                  : "text-foreground hover:text-[#E07A5F]"
               }`}
             >
               View Chronology
