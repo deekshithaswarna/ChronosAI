@@ -10,22 +10,41 @@ import { createRequire } from 'module';
 // Use CommonJS require to load pdf-parse to avoid triggering its debug mode
 const require = createRequire(import.meta.url);
 
+export interface PagedText {
+  fullText: string;
+  pages: Array<{ pageNumber: number; text: string }>;
+}
+
 /**
- * Pass 1: Extract text from PDF with structural preservation
+ * Pass 1: Extract text from PDF with page number tracking
  * Uses classic pdf-parse v1 API - simple and battle-tested
  */
-export async function extractTextFromPdf(fileBuffer: Buffer): Promise<string> {
+export async function extractTextFromPdf(fileBuffer: Buffer): Promise<PagedText> {
   try {
     // Use CommonJS require instead of ES module import to avoid debug mode
-    // pdf-parse checks module.parent to detect if it's being run directly
-    // Dynamic import() makes module.parent undefined, triggering debug mode
     const pdfParse = require('pdf-parse');
     
-    // Call pdf-parse directly as a function with buffer
-    const data = await pdfParse(fileBuffer);
+    // Track page numbers during extraction
+    const pages: Array<{ pageNumber: number; text: string }> = [];
     
-    // Return raw text with preserved structure
-    return data.text;
+    // Custom page render function to capture page numbers
+    const data = await pdfParse(fileBuffer, {
+      pagerender: (pageData: any) => {
+        return pageData.getTextContent().then((textContent: any) => {
+          const pageText = textContent.items.map((item: any) => item.str).join(' ');
+          pages.push({
+            pageNumber: pageData.pageNumber,
+            text: pageText,
+          });
+          return pageText;
+        });
+      },
+    });
+    
+    return {
+      fullText: data.text,
+      pages,
+    };
   } catch (error) {
     // Handle password-protected or corrupted PDFs gracefully
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -67,15 +86,24 @@ export function extractTextFromTxt(fileBuffer: Buffer): string {
 /**
  * Extract text from file buffer based on MIME type
  * Returns raw text with structural preservation (Pass 1)
+ * For PDFs, also returns page-level data
  */
-export async function extractText(fileBuffer: Buffer, mimeType: string): Promise<string> {
+export async function extractText(
+  fileBuffer: Buffer,
+  mimeType: string
+): Promise<{ text: string; pages?: Array<{ pageNumber: number; text: string }> }> {
   if (mimeType === 'application/pdf') {
-    return extractTextFromPdf(fileBuffer);
-  } else if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || 
-             mimeType === 'application/msword') {
-    return extractTextFromDocx(fileBuffer);
+    const pdfData = await extractTextFromPdf(fileBuffer);
+    return { text: pdfData.fullText, pages: pdfData.pages };
+  } else if (
+    mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+    mimeType === 'application/msword'
+  ) {
+    const text = await extractTextFromDocx(fileBuffer);
+    return { text };
   } else if (mimeType.startsWith('text/')) {
-    return extractTextFromTxt(fileBuffer);
+    const text = extractTextFromTxt(fileBuffer);
+    return { text };
   } else {
     throw new Error(`Unsupported file type: ${mimeType}`);
   }

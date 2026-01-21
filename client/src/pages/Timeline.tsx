@@ -2,36 +2,29 @@ import { useState } from 'react';
 import { FileUpload } from '@/components/FileUpload';
 import { DocumentsList } from '@/components/DocumentsList';
 import { Button } from '@/components/ui/button';
-import { useTheme } from '@/contexts/ThemeContext';
-import { Moon, Sun, Clock } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { Link } from 'wouter';
 
 export default function Timeline() {
-  const { theme, toggleTheme } = useTheme();
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-card shadow-sm">
         <div className="container py-6">
-          <div className="flex items-center justify-between animate-fadeIn">
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">Chronos</h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                AI-Powered Legal Timeline Builder
+              <h1 className="text-4xl font-bold heading">Chronos</h1>
+              <p className="text-sm text-muted-foreground mt-1 font-sans">
+                Legal Document Analysis Tool
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <Link href="/timeline">
-                <Button variant="outline" className="gap-2">
-                  <Clock className="h-4 w-4" />
-                  View Timeline
-                </Button>
-              </Link>
-              <Button variant="outline" size="icon" onClick={toggleTheme}>
-                {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            <Link href="/timeline">
+              <Button variant="outline" className="gap-2">
+                <Clock className="h-4 w-4" />
+                View Chronology
               </Button>
-            </div>
+            </Link>
           </div>
         </div>
       </header>

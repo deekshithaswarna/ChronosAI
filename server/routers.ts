@@ -55,7 +55,7 @@ export const appRouter = router({
         });
         
         // Trigger async processing (don't await)
-        processDocumentAsync(documentId, s3Url, input.mimeType).catch(err => {
+        processDocumentAsync(documentId, s3Url, input.mimeType, input.filename).catch(err => {
           console.error(`Failed to process document ${documentId}:`, err);
         });
         
@@ -136,7 +136,7 @@ export const appRouter = router({
 export type AppRouter = typeof appRouter;
 
 // Async document processing function
-async function processDocumentAsync(documentId: number, s3Url: string, mimeType: string) {
+async function processDocumentAsync(documentId: number, s3Url: string, mimeType: string, filename: string) {
   try {
     await db.updateDocumentStatus(documentId, "processing");
     
@@ -145,10 +145,10 @@ async function processDocumentAsync(documentId: number, s3Url: string, mimeType:
     const fileBuffer = Buffer.from(response.data);
     
     // Extract text using Node.js
-    const extractedText = await extractText(fileBuffer, mimeType);
+    const extractedData = await extractText(fileBuffer, mimeType);
     
     // Extract facts using LLM
-    const facts = await extractFactsFromText(extractedText);
+    const facts = await extractFactsFromText(extractedData.text, extractedData.pages, filename);
     
     // Get document to get userId
     const document = await db.getDocumentById(documentId);
@@ -171,7 +171,7 @@ async function processDocumentAsync(documentId: number, s3Url: string, mimeType:
     }
     
     // Update document status
-    await db.updateDocumentStatus(documentId, "completed", undefined, extractedText);
+    await db.updateDocumentStatus(documentId, "completed", undefined, extractedData.text);
     
   } catch (error) {
     console.error(`Document processing failed for ${documentId}:`, error);

@@ -18,24 +18,36 @@ export interface ExtractedFact {
 /**
  * Pass 3: Extract structured chronology from document text using three-pass pipeline
  * Handles relative dates like "the following day" or "two weeks later"
+ * @param text - Full document text
+ * @param pages - Optional page-level data for PDF documents
+ * @param filename - Document filename for source attribution
  */
-export async function extractFactsFromText(text: string): Promise<ExtractedFact[]> {
+export async function extractFactsFromText(
+  text: string,
+  pages?: Array<{ pageNumber: number; text: string }>,
+  filename?: string
+): Promise<ExtractedFact[]> {
   // Pass 2: Extract date anchors from structured text
   const dateAnchors = extractDateAnchors(text);
   
   if (dateAnchors.length === 0) {
     // No dates found - still try to extract facts without date anchoring
-    return await extractFactsWithLLM(text, []);
+    return await extractFactsWithLLM(text, [], pages, filename);
   }
   
   // Pass 3: Send anchored chunks to LLM for narrative synthesis
-  return await extractFactsWithLLM(text, dateAnchors);
+  return await extractFactsWithLLM(text, dateAnchors, pages, filename);
 }
 
 /**
- * Enhanced LLM prompt for legal chronology extraction
+ * Enhanced LLM prompt for legal chronology extraction with page number tracking
  */
-async function extractFactsWithLLM(text: string, dateAnchors: DateAnchor[]): Promise<ExtractedFact[]> {
+async function extractFactsWithLLM(
+  text: string,
+  dateAnchors: DateAnchor[],
+  pages?: Array<{ pageNumber: number; text: string }>,
+  filename?: string
+): Promise<ExtractedFact[]> {
   const systemPrompt = `You are a legal chronology expert. Extract a structured timeline from legal documents.
 
 FOCUS ON:

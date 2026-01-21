@@ -140,7 +140,30 @@ export async function getUserFacts(userId: number) {
   const db = await getDb();
   if (!db) return [];
   
-  return db.select().from(facts).where(eq(facts.userId, userId)).orderBy(facts.eventDate);
+  // Join with documents table to get document name
+  const result = await db
+    .select({
+      id: facts.id,
+      documentId: facts.documentId,
+      userId: facts.userId,
+      eventDate: facts.eventDate,
+      originalDateText: facts.originalDateText,
+      summary: facts.summary,
+      fullText: facts.fullText,
+      actor: facts.actor,
+      issue: facts.issue,
+      citation: facts.citation,
+      confidence: facts.confidence,
+      createdAt: facts.createdAt,
+      updatedAt: facts.updatedAt,
+      documentName: documents.filename,
+    })
+    .from(facts)
+    .leftJoin(documents, eq(facts.documentId, documents.id))
+    .where(eq(facts.userId, userId))
+    .orderBy(facts.eventDate);
+  
+  return result;
 }
 
 export async function getDocumentFacts(documentId: number) {

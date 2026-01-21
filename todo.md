@@ -133,3 +133,52 @@
 - [x] Remove old Data Table tab
 - [ ] Add tagging system UI (add/edit tags to documents)
 - [ ] Add document type field to schema
+
+## Legal Paper Theme Redesign
+- [x] Replace dark mode with Legal Paper aesthetic (beige/cream background #F5F5DC)
+- [x] Import Agdasima Google Font for headers and navigation
+- [x] Use Merriweather for table body text in black (#000000)
+- [x] Update borders to thin sharp black lines
+- [x] Remove theme toggle (single light theme only)
+
+## Enhanced Extraction Logic
+- [ ] Extract page numbers from PDF documents
+- [ ] Format source as "filename - pg X"
+- [ ] Extract persons involved (list of people and companies)
+- [ ] Make Issues field user-editable (not AI-generated)
+- [ ] Update fact extraction prompt for new fields
+
+## Premium Legal Aesthetic
+- [x] Create header with CHRONOS logo (Agdasima bold, uppercase, tracking-wide)
+- [x] Add legal-themed icon (hourglass or scales) next to logo
+- [x] Build segmented navigation bar (Document Workspace / Chronology Table)
+- [x] Style active tab (black bg, white text) and inactive (transparent, black outline)
+- [x] Update background to #F9F9F4 (rich cream)
+- [x] Add white card containers with subtle drop shadows
+- [x] Use Agdasima for headings, Inter/Roboto for body, Merriweather for table data
+
+## Strict HTML Table Chronology View
+- [x] Replace timeline cards with strict HTML <table>
+- [x] Add sticky top header with black background and white text
+- [x] Columns: Date (15%), Event Description (40%), Source (15%), Persons (15%), Issues (15%)
+- [x] Implement sortable columns
+- [x] Add zebra striping (white and #f3f4f6)
+- [x] Display Persons and Issues as small tags/chips inside cells
+- [ ] Format Source as "Document Name - pg X" (need page numbers from extraction)
+
+## Enhanced Upload View
+- [x] Center upload box as high-tech dropzone
+- [x] Add "Recent Uploads" list below dropzone
+- [x] Show processing status for each file
+
+## Multi-Select Filtering & Editable Issues
+- [ ] Replace single-select dropdowns with multi-select
+- [ ] Add "Filter by Person" multi-select
+- [ ] Add "Filter by Issue" multi-select
+- [ ] Make Issues field user-editable (inline or modal)
+- [ ] Update filtering logic for multiple selections
+
+## Updated Export
+- [ ] Update PDF export for new table format
+- [ ] Update Word export for new table format
+- [ ] Include all visible columns in exports

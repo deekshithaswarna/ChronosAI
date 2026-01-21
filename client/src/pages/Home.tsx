@@ -1,31 +1,34 @@
-import { useAuth } from "@/_core/hooks/useAuth";
-import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
-import { getLoginUrl } from "@/const";
-import { Streamdown } from 'streamdown';
+import { FileUpload } from '@/components/FileUpload';
+import { DocumentsList } from '@/components/DocumentsList';
+import { useState } from 'react';
 
-/**
- * All content in this page are only for example, replace with your own feature implementation
- * When building pages, remember your instructions in Frontend Workflow, Frontend Best Practices, Design Guide and Common Pitfalls
- */
 export default function Home() {
-  // The userAuth hooks provides authentication state
-  // To implement login/logout functionality, simply call logout() or redirect to getLoginUrl()
-  let { user, loading, error, isAuthenticated, logout } = useAuth();
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  // If theme is switchable in App.tsx, we can implement theme toggling like this:
-  // const { theme, toggleTheme } = useTheme();
+  const handleUploadComplete = () => {
+    setRefreshKey(prev => prev + 1);
+  };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <main>
-        {/* Example: lucide-react for icons */}
-        <Loader2 className="animate-spin" />
-        Example Page
-        {/* Example: Streamdown for markdown rendering */}
-        <Streamdown>Any **markdown** content</Streamdown>
-        <Button variant="default">Example Button</Button>
-      </main>
+    <div className="container py-12 max-w-6xl">
+      {/* Upload Section - Centered with white card */}
+      <section className="mb-12">
+        <div className="bg-card rounded-lg shadow-md p-8 border border-foreground/10">
+          <h2 className="text-2xl font-bold heading mb-2">Upload Legal Documents</h2>
+          <p className="text-sm text-muted-foreground mb-6">
+            Upload PDF, Word, or text files to generate a structured chronology
+          </p>
+          <FileUpload onUploadComplete={handleUploadComplete} />
+        </div>
+      </section>
+
+      {/* Recent Uploads Section */}
+      <section>
+        <div className="bg-card rounded-lg shadow-md p-8 border border-foreground/10">
+          <h2 className="text-2xl font-bold heading mb-6">Recent Uploads</h2>
+          <DocumentsList key={refreshKey} />
+        </div>
+      </section>
     </div>
   );
 }

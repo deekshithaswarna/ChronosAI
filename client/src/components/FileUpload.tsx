@@ -98,20 +98,20 @@ export function FileUpload({ onUploadComplete }: { onUploadComplete?: () => void
     <div className="space-y-4">
       <Card
         {...getRootProps()}
-        className={`border-2 border-dashed p-12 text-center cursor-pointer transition-all duration-300 ${
+        className={`border-2 border-dashed rounded-none p-12 text-center cursor-pointer transition-all duration-200 ${
           isDragActive
-            ? 'border-primary bg-primary/5'
-            : 'border-border hover:border-primary/50 hover:bg-muted/50'
+            ? 'border-foreground bg-accent/30'
+            : 'border-foreground/40 hover:border-foreground/70'
         }`}
       >
         <input {...getInputProps()} />
         <div className="flex flex-col items-center gap-4">
-          <div className={`rounded-full p-4 ${isDragActive ? 'bg-primary/10' : 'bg-muted'}`}>
-            <Upload className={`h-8 w-8 ${isDragActive ? 'text-primary' : 'text-muted-foreground'}`} />
+          <div className={`rounded-none p-4 border border-foreground ${isDragActive ? 'bg-accent' : 'bg-muted'}`}>
+            <Upload className={`h-8 w-8 text-foreground`} />
           </div>
           <div>
-            <p className="text-lg font-semibold text-foreground">
-              {isDragActive ? 'Drop files here' : 'Drag & drop files here'}
+            <p className="text-lg font-bold heading text-foreground">
+              {isDragActive ? 'Drop files here' : 'Upload legal bundles to generate chronology'}
             </p>
             <p className="text-sm text-muted-foreground mt-1">
               or click to browse
