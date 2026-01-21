@@ -513,3 +513,25 @@
 - [x] Document Minimalist Outlined as standard button style in code comments
 - [x] Added comprehensive documentation comment in button.tsx
 - [x] Specified default variant as the standard for all new buttons
+
+## Table Column Updates
+
+- [x] Remove sort function from Event Description column
+- [x] Remove onClick handler from Event Description header
+- [x] Remove ArrowUpDown icon from Event Description header
+- [x] Add filter icon to Source column header
+- [x] Implement Source filter dropdown with unique document titles
+- [x] Add state for Source filter (selectedSources)
+- [x] Update filtering logic to include Source filter
+- [x] Added selectedSources and showSourceFilter state
+- [x] Added sourceFilterRef for click-outside detection
+- [x] Created uniqueSources extraction from documentTitle
+- [x] Added Source filtering logic to filteredAndSortedFacts
+- [x] Filter icon turns terracotta when active
+- [x] Change "Persons" heading to "Actors" in table header
+- [x] Update all references to "Persons" to "Actors" in UI
+- [x] Updated table header from "Persons" to "Actors"
+- [x] Changed filter label from "Filter by Person" to "Filter by Actor"
+- [x] Updated "No persons found" to "No actors found"
+- [x] Updated PDF export column header
+- [x] Updated column comment in code

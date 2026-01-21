@@ -34,6 +34,8 @@ export default function ChronologyTable() {
   const [selectedIssues, setSelectedIssues] = useState<string[]>([]);
   const [showPersonFilter, setShowPersonFilter] = useState(false);
   const [showIssueFilter, setShowIssueFilter] = useState(false);
+  const [selectedSources, setSelectedSources] = useState<string[]>([]);
+  const [showSourceFilter, setShowSourceFilter] = useState(false);
   
   // Date filter state
   const [showDateFilter, setShowDateFilter] = useState(false);
@@ -47,6 +49,7 @@ export default function ChronologyTable() {
   const personFilterRef = useRef<HTMLDivElement>(null);
   const issueFilterRef = useRef<HTMLDivElement>(null);
   const dateFilterRef = useRef<HTMLDivElement>(null);
+  const sourceFilterRef = useRef<HTMLDivElement>(null);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -59,6 +62,9 @@ export default function ChronologyTable() {
       }
       if (dateFilterRef.current && !dateFilterRef.current.contains(event.target as Node)) {
         setShowDateFilter(false);
+      }
+      if (sourceFilterRef.current && !sourceFilterRef.current.contains(event.target as Node)) {
+        setShowSourceFilter(false);
       }
     };
 
@@ -94,6 +100,15 @@ export default function ChronologyTable() {
     return Array.from(issues).sort();
   }, [facts]);
   
+  const uniqueSources = useMemo(() => {
+    if (!facts) return [];
+    const sources = new Set<string>();
+    facts.forEach(fact => {
+      if (fact.documentTitle) sources.add(fact.documentTitle);
+    });
+    return Array.from(sources).sort();
+  }, [facts]);
+  
   // Get unique years and months from facts
   const uniqueYears = useMemo(() => {
     if (!facts) return [];
@@ -127,6 +142,11 @@ export default function ChronologyTable() {
           return f.userIssues.some(issue => selectedIssues.includes(issue));
         }
         return false;
+      });
+    }
+    if (selectedSources.length > 0) {
+      filtered = filtered.filter(f => {
+        return f.documentTitle && selectedSources.includes(f.documentTitle);
       });
     }
     
@@ -166,7 +186,7 @@ export default function ChronologyTable() {
       
       return sortDirection === 'asc' ? comparison : -comparison;
     });
-  }, [facts, sortField, sortDirection, selectedPersons, selectedIssues, dateFilterMode, selectedYears, selectedMonths, dateRangeFrom, dateRangeTo]);
+  }, [facts, sortField, sortDirection, selectedPersons, selectedIssues, selectedSources, dateFilterMode, selectedYears, selectedMonths, dateRangeFrom, dateRangeTo]);
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
@@ -350,7 +370,7 @@ export default function ChronologyTable() {
     // Generate table with autoTable
     autoTable(doc, {
       startY: 40,
-      head: [['Date', 'Event Description', 'Source', 'Persons', 'Issues', 'Comments']],
+      head: [['Date', 'Event Description', 'Source', 'Actors', 'Issues', 'Comments']],
       body: tableData,
       styles: {
         fontSize: 8,
@@ -367,7 +387,7 @@ export default function ChronologyTable() {
         0: { cellWidth: 20 },  // Date
         1: { cellWidth: 50 },  // Event Description
         2: { cellWidth: 35 },  // Source
-        3: { cellWidth: 25 },  // Persons
+        3: { cellWidth: 25 },  // Actors
         4: { cellWidth: 30 },  // Issues
         5: { cellWidth: 30 }   // Comments
       },
@@ -491,7 +511,7 @@ export default function ChronologyTable() {
     );
   }
 
-  const hasActiveFilters = selectedPersons.length > 0 || selectedIssues.length > 0;
+  const hasActiveFilters = selectedPersons.length > 0 || selectedIssues.length > 0 || selectedSources.length > 0;
 
   return (
     <div className="container py-12">
@@ -662,26 +682,45 @@ export default function ChronologyTable() {
                   )}
                 </th>
                 <th 
-                  className="w-[28%] p-4 text-left font-bold heading cursor-pointer hover:bg-foreground/90 transition-colors"
-                  onClick={() => toggleSort('event')}
+                  className="w-[28%] p-4 text-left font-bold heading"
                 >
-                  <div className="flex items-center gap-2">
-                    Event Description
-                    <ArrowUpDown className="h-5 w-5" />
-                  </div>
+                  Event Description
                 </th>
-                <th 
-                  className="w-[12%] p-4 text-left font-bold heading cursor-pointer hover:bg-foreground/90 transition-colors"
-                  onClick={() => toggleSort('source')}
-                >
+                <th className="w-[12%] p-4 text-left font-bold heading relative">
                   <div className="flex items-center gap-2">
                     Source
-                    <ArrowUpDown className="h-5 w-5" />
+                    <button
+                      onClick={() => setShowSourceFilter(!showSourceFilter)}
+                      className="hover:bg-background/10 p-1 rounded transition-colors"
+                    >
+                      <Filter className={`h-5 w-5 ${selectedSources.length > 0 ? 'text-[#E07A5F]' : ''}`} />
+                    </button>
                   </div>
+                  
+                  {/* Source Filter Dropdown */}
+                  {showSourceFilter && (
+                    <div ref={sourceFilterRef} className="absolute top-full left-0 mt-1 bg-background border border-border rounded-md shadow-lg p-4 z-20 min-w-[250px] max-h-[300px] overflow-y-auto">
+                      {uniqueSources.map(source => (
+                        <label key={source} className="flex items-center gap-2 p-2 hover:bg-accent rounded cursor-pointer">
+                          <Checkbox
+                            checked={selectedSources.includes(source)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedSources([...selectedSources, source]);
+                              } else {
+                                setSelectedSources(selectedSources.filter(s => s !== source));
+                              }
+                            }}
+                          />
+                          <span className="text-sm text-black">{source}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
                 </th>
                 <th className="w-[10%] p-4 text-left font-bold heading relative">
                   <div className="flex items-center gap-2">
-                    Persons
+                    Actors
                     <button
                       onClick={() => setShowPersonFilter(!showPersonFilter)}
                       className="hover:bg-background/10 p-1 rounded transition-colors"
@@ -696,10 +735,10 @@ export default function ChronologyTable() {
                       ref={personFilterRef}
                       className="absolute top-full left-0 mt-2 bg-card border border-foreground/20 rounded-lg shadow-lg p-4 min-w-[200px] z-20 text-foreground font-normal text-sm"
                     >
-                      <div className="font-semibold mb-2 text-xs uppercase tracking-wide">Filter by Person</div>
+                      <div className="font-semibold mb-2 text-xs uppercase tracking-wide">Filter by Actor</div>
                       <div className="max-h-[300px] overflow-y-auto space-y-2">
                         {uniquePersons.length === 0 ? (
-                          <div className="text-muted-foreground text-xs">No persons found</div>
+                          <div className="text-muted-foreground text-xs">No actors found</div>
                         ) : (
                           uniquePersons.map(person => (
                             <label key={person} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-1 rounded">
@@ -800,7 +839,7 @@ export default function ChronologyTable() {
                     </div>
                   </td>
 
-                  {/* Persons Column - Split into individual tags */}
+                  {/* Actors Column - Split into individual tags */}
                   <td className="p-4 align-top" style={{ fontSize: '14px' }}>
                     <div className="flex flex-wrap gap-1">
                       {fact.actor && fact.actor.split(/[,;]/).map((person, idx) => {
