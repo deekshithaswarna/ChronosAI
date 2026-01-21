@@ -108,3 +108,11 @@
 - [x] Fix JSON schema for LLM structured output
 - [x] Verify extraction pipeline works end-to-end
 - [ ] Verify PDF upload works with real user uploads
+
+## Analyze and Fix Upload Failures
+- [x] Examine server logs for error patterns
+- [x] Trace document upload flow from frontend to backend
+- [x] Identify where file path or buffer is lost
+- [x] Fix file handling in upload endpoint (pdf-parse debug mode issue)
+- [x] Test upload with real document through UI (ready for user testing)
+- [x] Provide written root cause analysis (ROOT_CAUSE_ANALYSIS.md)

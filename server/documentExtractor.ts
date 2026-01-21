@@ -5,6 +5,10 @@
  * Pass 3: Narrative synthesis (handled by factExtractor)
  */
 import mammoth from 'mammoth';
+import { createRequire } from 'module';
+
+// Use CommonJS require to load pdf-parse to avoid triggering its debug mode
+const require = createRequire(import.meta.url);
 
 /**
  * Pass 1: Extract text from PDF with structural preservation
@@ -12,10 +16,10 @@ import mammoth from 'mammoth';
  */
 export async function extractTextFromPdf(fileBuffer: Buffer): Promise<string> {
   try {
-    // Dynamic import for CommonJS module - pdf-parse v1 is a direct function
-    // @ts-ignore - pdf-parse v1 doesn't have TypeScript definitions
-    const pdfParseModule: any = await import('pdf-parse');
-    const pdfParse = pdfParseModule.default || pdfParseModule;
+    // Use CommonJS require instead of ES module import to avoid debug mode
+    // pdf-parse checks module.parent to detect if it's being run directly
+    // Dynamic import() makes module.parent undefined, triggering debug mode
+    const pdfParse = require('pdf-parse');
     
     // Call pdf-parse directly as a function with buffer
     const data = await pdfParse(fileBuffer);

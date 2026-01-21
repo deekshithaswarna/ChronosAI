@@ -1,0 +1,18 @@
+{
+  "query": "SELECT id, filename, mimeType, status, errorMessage, s3Url FROM documents ORDER BY id DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3awovWyecyN2Fyr.root --database kVB3RjsaxJBZT5cwSYSGJp --execute SELECT id, filename, mimeType, status, errorMessage, s3Url FROM documents ORDER BY id DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "120001",
+      "filename": "italaw4460.pdf",
+      "mimeType": "application/pdf",
+      "status": "failed",
+      "errorMessage": "Error: Failed to extract text from PDF: ENOENT: no such file or directory, open './test/data/05-versions-space.pdf'",
+      "s3Url": "https://d2xsxph8kpxj0f.cloudfront.net/310519663303998524/kVB3RjsaxJBZT5cwSYSGJp/1/documents/yjT1eunqA7Emfkaw-Pztk-italaw4460.pdf"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tfilename\tmimeType\tstatus\terrorMessage\ts3Url\n120001\titalaw4460.pdf\tapplication/pdf\tfailed\tError: Failed to extract text from PDF: ENOENT: no such file or directory, open './test/data/05-versions-space.pdf'\thttps://d2xsxph8kpxj0f.cloudfront.net/310519663303998524/kVB3RjsaxJBZT5cwSYSGJp/1/documents/yjT1eunqA7Emfkaw-Pztk-italaw4460.pdf\n",
+  "stderr": "",
+  "execution_time_ms": 1212
+}
