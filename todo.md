@@ -879,3 +879,10 @@
 - [x] Grey out buttons when no history available
 - [x] Buttons currently disabled with "Coming Soon" tooltip
 - [ ] NOTE: Full undo/redo implementation requires state history tracking - marked as disabled for now
+
+## Center Search Bar & Undo/Redo Buttons
+
+- [x] Center search bar and undo/redo button container above table
+- [x] Add justify-center to container
+- [x] Removed flex-1 from search div to prevent stretching
+- [x] Container now centered with justify-center class
