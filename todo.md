@@ -547,3 +547,27 @@
 - [x] Updated Comments column to 17% (from 18%)
 - [x] Added word-wrap: break-word and overflowWrap: break-word to Event Description column
 - [x] Added word-wrap: break-word and overflowWrap: break-word to Comments column
+
+## Table Layout Refinement & Event Description Enhancement
+
+- [x] Update Date column to 8% (no change)
+- [x] Update Event Description column to 35% (from 37%)
+- [x] Update Source column to 12% (no change)
+- [x] Update Actors column to 15% (from 13%)
+- [x] Update Issues column to 10% (from 13%)
+- [x] Update Comments column to 20% (from 17%)
+- [x] Add white-space: normal and word-wrap: break-word to Actors column
+- [x] Ensure Event Description wraps naturally with proper CSS
+- [x] Make Event Description text editable by user
+- [x] Add pencil icon (visible on hover) next to Event Description text
+- [x] Implement click-to-edit functionality for Event Description
+- [x] Save Event Description edits to database
+- [x] Added summary field to facts.update mutation
+- [x] Added summary field to updateFact function in db.ts
+- [x] Added state management for editing descriptions
+- [x] Implemented hover state with pencil icon
+- [x] Click-to-edit with Textarea component
+- [x] Auto-save on blur with database update
+- [x] Update AI extraction prompt to generate detailed, comprehensive summaries
+- [x] Enhance LLM prompt to include key context and specific actions (not overly concise)
+- [x] Changed Event prompt to request 2-4 sentence detailed summaries with context

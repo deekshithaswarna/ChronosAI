@@ -20,10 +20,13 @@ export default function ChronologyTable() {
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   
-  // State for edited issues and comments
+  // State for edited issues, comments, and descriptions
   const [editedIssues, setEditedIssues] = useState<Record<number, string[]>>({});
   const [editedComments, setEditedComments] = useState<Record<number, string>>({});
+  const [editedDescriptions, setEditedDescriptions] = useState<Record<number, string>>({});
   const [newIssueInputs, setNewIssueInputs] = useState<Record<number, string>>({});
+  const [editingDescriptionId, setEditingDescriptionId] = useState<number | null>(null);
+  const [hoveredDescriptionId, setHoveredDescriptionId] = useState<number | null>(null);
   
   // State for inline person editing
   const [editingPerson, setEditingPerson] = useState<string | null>(null);
@@ -337,6 +340,42 @@ export default function ChronologyTable() {
       return editedComments[fact.id];
     }
     return fact.comments || '';
+  };
+
+  // Get current value for Event Description (edited or original)
+  const getDescriptionValue = (fact: any) => {
+    if (editedDescriptions[fact.id] !== undefined) {
+      return editedDescriptions[fact.id];
+    }
+    return fact.summary || '';
+  };
+
+  // Handle Event Description field change
+  const handleDescriptionChange = (factId: number, value: string) => {
+    setEditedDescriptions(prev => ({ ...prev, [factId]: value }));
+  };
+
+  // Save Event Description field on blur
+  const handleDescriptionSave = async (factId: number) => {
+    const newValue = editedDescriptions[factId];
+    if (newValue !== undefined) {
+      await updateFactMutation.mutateAsync({
+        id: factId,
+        summary: newValue,
+      });
+      utils.facts.list.invalidate();
+      setEditingDescriptionId(null);
+    }
+  };
+
+  // Start editing Event Description
+  const startEditingDescription = (factId: number) => {
+    setEditingDescriptionId(factId);
+  };
+
+  // Cancel editing Event Description
+  const cancelDescriptionEdit = () => {
+    setEditingDescriptionId(null);
   };
 
   // Export to PDF with filtered data and user edits using jspdf-autotable
@@ -683,7 +722,7 @@ export default function ChronologyTable() {
                 </th>
                 <th 
                   className="p-4 text-left font-bold heading"
-                  style={{ width: '37%' }}
+                  style={{ width: '35%' }}
                 >
                   Event Description
                 </th>
@@ -719,7 +758,7 @@ export default function ChronologyTable() {
                     </div>
                   )}
                 </th>
-                <th className="p-4 text-left font-bold heading relative" style={{ width: '13%' }}>
+                <th className="p-4 text-left font-bold heading relative" style={{ width: '15%' }}>
                   <div className="flex items-center gap-2">
                     Actors
                     <button
@@ -755,7 +794,7 @@ export default function ChronologyTable() {
                     </div>
                   )}
                 </th>
-                <th className="p-4 text-left font-bold heading relative" style={{ width: '13%' }}>
+                <th className="p-4 text-left font-bold heading relative" style={{ width: '10%' }}>
                   <div className="flex items-center gap-2">
                     Issues
                     <button
@@ -791,7 +830,7 @@ export default function ChronologyTable() {
                     </div>
                   )}
                 </th>
-                <th className="p-4 text-left font-bold heading" style={{ width: '17%' }}>
+                <th className="p-4 text-left font-bold heading" style={{ width: '20%' }}>
                   Comments
                 </th>
               </tr>
@@ -813,11 +852,37 @@ export default function ChronologyTable() {
                     </span>
                   </td>
 
-                  {/* Event Description Column */}
-                  <td className="p-4 align-top" style={{ fontSize: '14px', wordWrap: 'break-word', overflowWrap: 'break-word' }}>
-                    <p className="text-foreground leading-relaxed">
-                      {fact.summary}
-                    </p>
+                  {/* Event Description Column - Editable */}
+                  <td 
+                    className="p-4 align-top" 
+                    style={{ fontSize: '14px', wordWrap: 'break-word', overflowWrap: 'break-word' }}
+                    onMouseEnter={() => setHoveredDescriptionId(fact.id)}
+                    onMouseLeave={() => setHoveredDescriptionId(null)}
+                  >
+                    {editingDescriptionId === fact.id ? (
+                      <Textarea
+                        value={getDescriptionValue(fact)}
+                        onChange={(e) => handleDescriptionChange(fact.id, e.target.value)}
+                        onBlur={() => handleDescriptionSave(fact.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Escape') cancelDescriptionEdit();
+                        }}
+                        autoFocus
+                        className="min-h-[80px] text-sm resize-none border-muted focus:border-foreground/30"
+                      />
+                    ) : (
+                      <div 
+                        className="flex items-start gap-2 cursor-pointer hover:bg-foreground/5 p-1 -m-1 rounded transition-colors"
+                        onClick={() => startEditingDescription(fact.id)}
+                      >
+                        <p className="text-foreground leading-relaxed flex-1">
+                          {getDescriptionValue(fact)}
+                        </p>
+                        {hoveredDescriptionId === fact.id && (
+                          <Pencil className="h-3 w-3 text-muted-foreground flex-shrink-0 mt-1" />
+                        )}
+                      </div>
+                    )}
                   </td>
 
                   {/* Source Column */}
@@ -841,7 +906,7 @@ export default function ChronologyTable() {
                   </td>
 
                   {/* Actors Column - Split into individual tags */}
-                  <td className="p-4 align-top" style={{ fontSize: '14px' }}>
+                  <td className="p-4 align-top" style={{ fontSize: '14px', whiteSpace: 'normal', wordWrap: 'break-word' }}>
                     <div className="flex flex-wrap gap-1">
                       {fact.actor && fact.actor.split(/[,;]/).map((person, idx) => {
                         const trimmed = person.trim();
