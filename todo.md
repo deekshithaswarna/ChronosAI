@@ -182,3 +182,10 @@
 - [ ] Update PDF export for new table format
 - [ ] Update Word export for new table format
 - [ ] Include all visible columns in exports
+
+## Debug Table Rendering Issue
+- [x] Check if ChronologyTable component is loading correctly
+- [x] Identified root cause: App.tsx was importing TimelineTable (old cards view) instead of ChronologyTable (new HTML table)
+- [x] Fixed import to use ChronologyTable.tsx
+- [x] Restarted server to clear import cache
+- [x] Verified table HTML is rendering in DOM

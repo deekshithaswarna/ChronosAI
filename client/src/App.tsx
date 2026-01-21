@@ -5,7 +5,7 @@ import { Route, Switch, useLocation, Link } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
-import ChronologyTable from "./pages/TimelineTable";
+import ChronologyTable from "./pages/ChronologyTable";
 import NotFound from "./pages/NotFound";
 
 function Router() {
