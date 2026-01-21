@@ -562,19 +562,19 @@ export default function ChronologyTable() {
                       <div className="flex gap-2 mb-4 border-b border-border">
                         <button
                           onClick={() => setDateFilterMode('year')}
-                          className={`px-3 py-2 text-sm transition-colors ${dateFilterMode === 'year' ? 'border-b-2 border-[#E07A5F] text-[#E07A5F] font-bold' : 'text-foreground/70 hover:text-foreground'}`}
+                          className={`px-3 py-2 text-sm transition-colors ${dateFilterMode === 'year' ? 'border-b-2 border-[#E07A5F] text-[#E07A5F] font-bold' : 'text-black hover:text-[#E07A5F]'}`}
                         >
                           By Year
                         </button>
                         <button
                           onClick={() => setDateFilterMode('month')}
-                          className={`px-3 py-2 text-sm transition-colors ${dateFilterMode === 'month' ? 'border-b-2 border-[#E07A5F] text-[#E07A5F] font-bold' : 'text-foreground/70 hover:text-foreground'}`}
+                          className={`px-3 py-2 text-sm transition-colors ${dateFilterMode === 'month' ? 'border-b-2 border-[#E07A5F] text-[#E07A5F] font-bold' : 'text-black hover:text-[#E07A5F]'}`}
                         >
                           By Month
                         </button>
                         <button
                           onClick={() => setDateFilterMode('range')}
-                          className={`px-3 py-2 text-sm transition-colors ${dateFilterMode === 'range' ? 'border-b-2 border-[#E07A5F] text-[#E07A5F] font-bold' : 'text-foreground/70 hover:text-foreground'}`}
+                          className={`px-3 py-2 text-sm transition-colors ${dateFilterMode === 'range' ? 'border-b-2 border-[#E07A5F] text-[#E07A5F] font-bold' : 'text-black hover:text-[#E07A5F]'}`}
                         >
                           By Range
                         </button>
@@ -595,7 +595,7 @@ export default function ChronologyTable() {
                                   }
                                 }}
                               />
-                              <span className="text-sm">{year}</span>
+                              <span className="text-sm text-black">{year}</span>
                             </label>
                           ))}
                         </div>
@@ -616,7 +616,7 @@ export default function ChronologyTable() {
                                   }
                                 }}
                               />
-                              <span className="text-sm">{month}</span>
+                              <span className="text-sm text-black">{month}</span>
                             </label>
                           ))}
                         </div>
@@ -626,7 +626,7 @@ export default function ChronologyTable() {
                       {dateFilterMode === 'range' && (
                         <div className="space-y-4">
                           <div>
-                            <label className="text-sm font-medium mb-1 block">From:</label>
+                            <label className="text-sm font-medium mb-1 block text-black">From:</label>
                             <input
                               type="date"
                               value={dateRangeFrom}
@@ -635,7 +635,7 @@ export default function ChronologyTable() {
                             />
                           </div>
                           <div>
-                            <label className="text-sm font-medium mb-1 block">To:</label>
+                            <label className="text-sm font-medium mb-1 block text-black">To:</label>
                             <input
                               type="date"
                               value={dateRangeTo}
@@ -647,17 +647,17 @@ export default function ChronologyTable() {
                       )}
                       
                       {/* Clear Filters Button */}
-                      <button
+                      <Button
                         onClick={() => {
                           setSelectedYears([]);
                           setSelectedMonths([]);
                           setDateRangeFrom('');
                           setDateRangeTo('');
                         }}
-                        className="mt-4 w-full px-3 py-2 text-sm bg-accent hover:bg-accent/80 rounded transition-colors"
+                        className="mt-4 w-full"
                       >
                         Clear Date Filters
-                      </button>
+                      </Button>
                     </div>
                   )}
                 </th>
