@@ -189,3 +189,57 @@
 - [x] Fixed import to use ChronologyTable.tsx
 - [x] Restarted server to clear import cache
 - [x] Verified table HTML is rendering in DOM
+
+## UI/UX Polish & Functional Refinement
+- [x] Redesign navigation: remove black borders, use plain text links
+- [x] Add hover effects (Dark Slate Blue #2C3E50)
+- [x] Active state: bold text with thin black underline
+- [x] Change table headers to solid black background (#000000) with white text (#FFFFFF)
+- [x] Change all fonts to Inter (remove Agdasima, Merriweather)
+- [x] Update tagline to "Build your case chronology instantly"
+- [x] Remove "Legal" from "Legal Chronology" header
+- [x] Rename menu items to "Upload Documents" and "View Chronology"
+- [x] Fix nested anchor tag error in navigation
+
+## Editable Columns with State Persistence
+- [x] Add "Comments" column at far right of table
+- [x] Make "Issues" column editable (text input or dropdown)
+- [x] Make "Comments" column editable (text area)
+- [x] Implement state persistence (edits survive sorting/filtering)
+- [x] Save edits to database
+- [x] Added userIssue and comments fields to database schema
+- [x] Created updateFact function in db.ts
+- [x] Added facts.update tRPC mutation
+- [x] Implemented Textarea components with local state management
+
+## Inline Table Header Filtering
+- [x] Remove external filters section above table
+- [x] Add filter icon to "Person" column header
+- [x] Add filter icon to "Issue" column header
+- [x] Implement dropdown checkbox list for Person filtering
+- [x] Implement dropdown checkbox list for Issue filtering
+- [x] Added click-outside detection to close dropdowns
+- [x] Highlight filter icons when filters are active (blue color)
+- [x] Show filtered count in header (e.g., "50 events (filtered from 100)")
+- [x] Added "Clear all filters" button
+
+## Smart Source Intelligence
+- [x] Update AI extraction to generate Smart Title from document content
+- [x] Display Smart Title (bold) in Source column
+- [ ] Display page number below Smart Title (e.g., "Pg. 14")
+- [x] Update LLM prompt to extract document type/title
+- [x] Added documentTitle field to documents schema
+- [x] Updated ExtractionResult interface to include documentTitle
+- [x] Modified JSON schema to require documentTitle field
+- [x] Created updateDocumentWithTitle function in db.ts
+- [x] Updated ChronologyTable to display documentTitle with fallback to filename
+
+## WYSIWYG Export Logic
+- [x] Update PDF export to reflect filtered table view
+- [x] Update Word export to reflect filtered table view
+- [x] Include user-entered Issues text in exports
+- [x] Include user-entered Comments text in exports
+- [x] PDF export includes document title, generation date, and filtered event count
+- [x] Word export uses proper table formatting with bold headers
+- [x] Both exports use filteredAndSortedFacts to respect current filters
+- [x] Both exports use getIssueValue() and getCommentValue() to include user edits

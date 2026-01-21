@@ -127,6 +127,19 @@ export async function updateDocumentStatus(id: number, status: "pending" | "proc
     .where(eq(documents.id, id));
 }
 
+export async function updateDocumentWithTitle(id: number, documentTitle: string, extractedText?: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(documents)
+    .set({ 
+      documentTitle,
+      extractedText: extractedText || null,
+      updatedAt: new Date()
+    })
+    .where(eq(documents.id, id));
+}
+
 // Fact queries
 export async function createFact(fact: InsertFact) {
   const db = await getDb();
@@ -140,7 +153,7 @@ export async function getUserFacts(userId: number) {
   const db = await getDb();
   if (!db) return [];
   
-  // Join with documents table to get document name
+  // Join with documents table to get document name and title
   const result = await db
     .select({
       id: facts.id,
@@ -152,11 +165,14 @@ export async function getUserFacts(userId: number) {
       fullText: facts.fullText,
       actor: facts.actor,
       issue: facts.issue,
+      userIssue: facts.userIssue,
       citation: facts.citation,
+      comments: facts.comments,
       confidence: facts.confidence,
       createdAt: facts.createdAt,
       updatedAt: facts.updatedAt,
       documentName: documents.filename,
+      documentTitle: documents.documentTitle,
     })
     .from(facts)
     .leftJoin(documents, eq(facts.documentId, documents.id))
@@ -171,6 +187,19 @@ export async function getDocumentFacts(documentId: number) {
   if (!db) return [];
   
   return db.select().from(facts).where(eq(facts.documentId, documentId)).orderBy(facts.eventDate);
+}
+
+export async function updateFact(id: number, userId: number, updates: { userIssue?: string; comments?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(facts)
+    .set({ 
+      userIssue: updates.userIssue,
+      comments: updates.comments,
+      updatedAt: new Date()
+    })
+    .where(and(eq(facts.id, id), eq(facts.userId, userId)));
 }
 
 export async function deleteDocument(id: number, userId: number) {

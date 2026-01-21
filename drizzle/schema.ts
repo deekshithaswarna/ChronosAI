@@ -33,6 +33,7 @@ export const documents = mysqlTable("documents", {
   status: mysqlEnum("status", ["pending", "processing", "completed", "failed"]).default("pending").notNull(),
   errorMessage: text("errorMessage"),
   extractedText: text("extractedText"), // Raw extracted text
+  documentTitle: text("documentTitle"), // AI-generated smart title
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -56,8 +57,10 @@ export const facts = mysqlTable("facts", {
   
   // Categorization
   actor: varchar("actor", { length: 255 }), // Person/entity involved
-  issue: varchar("issue", { length: 255 }), // Legal issue category
+  issue: varchar("issue", { length: 255 }), // AI-extracted legal issue category
+  userIssue: text("userIssue"), // User-editable issue tags
   citation: text("citation"), // Legal citation if present
+  comments: text("comments"), // User-editable comments
   
   // Metadata
   pageNumber: int("pageNumber"), // Source page in document

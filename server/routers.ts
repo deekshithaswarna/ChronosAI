@@ -118,6 +118,21 @@ export const appRouter = router({
         
         return filtered;
       }),
+
+    // Update fact (for editable fields)
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        userIssue: z.string().optional(),
+        comments: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.updateFact(input.id, ctx.user.id, {
+          userIssue: input.userIssue,
+          comments: input.comments,
+        });
+        return { success: true };
+      }),
   }),
 
   actors: router({
@@ -147,15 +162,15 @@ async function processDocumentAsync(documentId: number, s3Url: string, mimeType:
     // Extract text using Node.js
     const extractedData = await extractText(fileBuffer, mimeType);
     
-    // Extract facts using LLM
-    const facts = await extractFactsFromText(extractedData.text, extractedData.pages, filename);
+    // Extract facts using LLM (returns ExtractionResult with documentTitle and facts)
+    const extractionResult = await extractFactsFromText(extractedData.text, extractedData.pages, filename);
     
     // Get document to get userId
     const document = await db.getDocumentById(documentId);
     if (!document) throw new Error("Document not found");
     
     // Save facts to database with new schema
-    for (const fact of facts) {
+    for (const fact of extractionResult.facts) {
       await db.createFact({
         documentId,
         userId: document.userId,
@@ -170,8 +185,9 @@ async function processDocumentAsync(documentId: number, s3Url: string, mimeType:
       });
     }
     
-    // Update document status
-    await db.updateDocumentStatus(documentId, "completed", undefined, extractedData.text);
+    // Update document status and save document title
+    await db.updateDocumentWithTitle(documentId, extractionResult.documentTitle, extractedData.text);
+    await db.updateDocumentStatus(documentId, "completed");
     
   } catch (error) {
     console.error(`Document processing failed for ${documentId}:`, error);

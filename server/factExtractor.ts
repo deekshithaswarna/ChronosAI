@@ -15,6 +15,11 @@ export interface ExtractedFact {
   originalText: string;
 }
 
+export interface ExtractionResult {
+  documentTitle: string;
+  facts: ExtractedFact[];
+}
+
 /**
  * Pass 3: Extract structured chronology from document text using three-pass pipeline
  * Handles relative dates like "the following day" or "two weeks later"
@@ -26,7 +31,7 @@ export async function extractFactsFromText(
   text: string,
   pages?: Array<{ pageNumber: number; text: string }>,
   filename?: string
-): Promise<ExtractedFact[]> {
+): Promise<ExtractionResult> {
   // Pass 2: Extract date anchors from structured text
   const dateAnchors = extractDateAnchors(text);
   
@@ -40,17 +45,22 @@ export async function extractFactsFromText(
 }
 
 /**
- * Enhanced LLM prompt for legal chronology extraction with page number tracking
+ * Enhanced LLM prompt for legal chronology extraction with document title generation
  */
 async function extractFactsWithLLM(
   text: string,
   dateAnchors: DateAnchor[],
   pages?: Array<{ pageNumber: number; text: string }>,
   filename?: string
-): Promise<ExtractedFact[]> {
-  const systemPrompt = `You are a legal chronology expert. Extract a structured timeline from legal documents.
+): Promise<ExtractionResult> {
+  const systemPrompt = `You are a legal chronology expert. Extract a structured timeline from legal documents and generate a descriptive document title.
 
-FOCUS ON:
+DOCUMENT TITLE:
+- Generate a concise, descriptive title that identifies the document type and key parties
+- Examples: "Witness Statement of John Doe", "Employment Contract - Smith v. ABC Corp", "Medical Records - Dr. Jane Smith"
+- Use title case and be specific about the document's purpose
+
+FACT EXTRACTION - FOCUS ON:
 - Date: Exact date (calculate if relative like "the following day" or "two weeks later")
 - Time: Specific time if mentioned (e.g., "3:00 PM", "morning")
 - Actor: Who performed the action (person, company, entity)
@@ -65,7 +75,7 @@ RELATIVE DATE HANDLING:
 
 Return ONLY valid JSON with no additional text.`;
 
-  const userPrompt = `Extract all legal events from this document. Pay special attention to dates and calculate relative dates based on context.
+  const userPrompt = `Extract all legal events from this document and generate a descriptive document title. Pay special attention to dates and calculate relative dates based on context.
 
 ${dateAnchors.length > 0 ? `\nDate anchors found:\n${dateAnchors.map(a => `- ${a.date}: ${a.context.substring(0, 150)}...`).join('\n')}\n` : ''}
 
@@ -86,6 +96,7 @@ ${text.substring(0, 15000)}`;
           schema: {
             type: 'object',
             properties: {
+              documentTitle: { type: 'string', description: 'Descriptive title for the document' },
               events: {
                 type: 'array',
                 items: {
@@ -104,7 +115,7 @@ ${text.substring(0, 15000)}`;
                 },
               },
             },
-            required: ['events'],
+            required: ['documentTitle', 'events'],
             additionalProperties: false,
           },
         },
@@ -126,9 +137,10 @@ ${text.substring(0, 15000)}`;
     const contentString = typeof content === 'string' ? content : JSON.stringify(content);
     const result = JSON.parse(contentString);
     const events = result.events || [];
+    const documentTitle = result.documentTitle || filename || 'Untitled Document';
 
     // Normalize and validate dates
-    return events.map((event: any) => ({
+    const facts = events.map((event: any) => ({
       date: normalizeDate(event.date),
       time: event.time || undefined,
       actor: event.actor,
@@ -137,9 +149,17 @@ ${text.substring(0, 15000)}`;
       citation: event.citation || undefined,
       originalText: event.originalText,
     }));
+
+    return {
+      documentTitle,
+      facts,
+    };
   } catch (error) {
     console.error('LLM extraction error:', error);
-    return [];
+    return {
+      documentTitle: filename || 'Untitled Document',
+      facts: [],
+    };
   }
 }
 

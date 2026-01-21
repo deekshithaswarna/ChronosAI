@@ -1,6 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import url('https://fonts.googleapis.com/css2?family=Agdasima:wght=400;700&family=Merriweather:wght@300;400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
 @custom-variant dark (&:is(.dark *));
 
@@ -134,13 +134,13 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Merriweather', serif;
+    font-family: 'Inter', sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
   
-  /* Agdasima for headings and navigation */
+  /* Inter for all text */
   h1, h2, h3, h4, h5, h6, nav, .heading {
-    font-family: 'Agdasima', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-weight: 700;
   }
   
@@ -200,9 +200,10 @@
   }
   
   .legal-table th {
-    font-family: 'Agdasima', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-weight: 700;
-    background-color: oklch(0.92 0.015 60);
+    background-color: oklch(0 0 0); /* Solid black */
+    color: oklch(1 0 0); /* White text */
   }
   
   .legal-table tr:hover {
@@ -212,7 +213,7 @@
 
 /* Legal table styles */
 .legal-table {
-  font-family: 'Merriweather', serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .legal-table thead th {
