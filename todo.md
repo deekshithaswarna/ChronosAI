@@ -330,3 +330,18 @@
 - [x] Added pageNumber to getUserFacts query
 - [x] Source column now shows "Smart Title, p.X" as hyperlink
 - [x] Citation field displays as grey text with proper formatting
+
+## UI Refinements (User Feedback)
+
+### Logo Centering
+- [x] Center CHRONOS logo above navigation menu items
+- [x] Adjust layout to have logo centered at top with menu below
+
+### Person Tag Discoverability
+- [x] Add pencil icon next to person tags to indicate they're editable
+- [x] Make it clear to users that clicking person tags allows renaming
+
+### Table Header Icon Consistency
+- [x] Standardize all sorting and filtering icon sizes in table headers
+- [x] Ensure ArrowUpDown and Filter icons are the same size
+- [x] All icons already set to h-4 w-4 (16px) for consistency

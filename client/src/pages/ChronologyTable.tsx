@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
-import { ArrowUpDown, Download, Filter, X, Plus } from 'lucide-react';
+import { ArrowUpDown, Download, Filter, X, Plus, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
@@ -629,10 +629,11 @@ export default function ChronologyTable() {
                           <Badge 
                             key={idx} 
                             variant="secondary" 
-                            className="text-xs cursor-pointer hover:bg-[#E07A5F] hover:text-white transition-colors"
+                            className="text-xs cursor-pointer hover:bg-[#E07A5F] hover:text-white transition-colors flex items-center gap-1"
                             onClick={() => handleRenamePerson(trimmed)}
                           >
                             {trimmed}
+                            <Pencil className="h-3 w-3" />
                           </Badge>
                         );
                       })}
