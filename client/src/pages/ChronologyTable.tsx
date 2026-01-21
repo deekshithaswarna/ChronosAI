@@ -300,10 +300,11 @@ export default function ChronologyTable() {
     const newIssue = newIssueInputs[factId]?.trim();
     if (!newIssue) return;
     
+    saveToHistory(); // Save BEFORE making changes
+    
     const currentIssues = getIssueValue({ id: factId, ...facts?.find(f => f.id === factId) });
     const updatedIssues = [...currentIssues, newIssue];
     
-    saveToHistory();
     setEditedIssues(prev => ({ ...prev, [factId]: updatedIssues }));
     setNewIssueInputs(prev => ({ ...prev, [factId]: '' }));
     
@@ -316,10 +317,11 @@ export default function ChronologyTable() {
 
   // Remove issue tag
   const handleRemoveIssue = async (factId: number, issueToRemove: string) => {
+    saveToHistory(); // Save BEFORE making changes
+    
     const currentIssues = getIssueValue({ id: factId, ...facts?.find(f => f.id === factId) });
     const updatedIssues = currentIssues.filter(issue => issue !== issueToRemove);
     
-    saveToHistory();
     setEditedIssues(prev => ({ ...prev, [factId]: updatedIssues }));
     
     await updateFactMutation.mutateAsync({
@@ -410,6 +412,20 @@ export default function ChronologyTable() {
     setEditedDescriptions(prev => ({ ...prev, [factId]: value }));
   };
 
+  // Initialize history with current state on first render
+  useEffect(() => {
+    if (history.length === 0 && facts && facts.length > 0) {
+      const initialSnapshot: HistorySnapshot = {
+        editedIssues: {},
+        editedComments: {},
+        editedDescriptions: {},
+        editedDates: {},
+      };
+      setHistory([initialSnapshot]);
+      setHistoryIndex(0);
+    }
+  }, [facts]);
+
   // History management functions
   const saveToHistory = () => {
     const snapshot: HistorySnapshot = {
@@ -457,9 +473,9 @@ export default function ChronologyTable() {
 
   // Save Event Description field on blur
   const handleDescriptionSave = async (factId: number) => {
+    saveToHistory(); // Save BEFORE making changes
     const newValue = editedDescriptions[factId];
     if (newValue !== undefined) {
-      saveToHistory();
       await updateFactMutation.mutateAsync({
         id: factId,
         summary: newValue,
@@ -491,8 +507,9 @@ export default function ChronologyTable() {
   const confirmDelete = async () => {
     if (factToDelete === null) return;
     
+    saveToHistory(); // Save BEFORE making changes
+    
     try {
-      saveToHistory();
       await deleteFactMutation.mutateAsync({ id: factToDelete });
       utils.facts.list.invalidate();
       setShowDeleteModal(false);
@@ -519,10 +536,10 @@ export default function ChronologyTable() {
 
   // Save Date field on blur with auto-sorting
   const handleDateSave = async (factId: number) => {
+    saveToHistory(); // Save BEFORE making changes
     const newDateValue = editedDates[factId];
     if (newDateValue !== undefined) {
       try {
-        saveToHistory();
         // Convert YYYY-MM-DD to Date object
         const newDate = new Date(newDateValue);
         await updateFactMutation.mutateAsync({

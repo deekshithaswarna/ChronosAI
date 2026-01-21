@@ -886,3 +886,15 @@
 - [x] Add justify-center to container
 - [x] Removed flex-1 from search div to prevent stretching
 - [x] Container now centered with justify-center class
+
+## Fix Non-Functional Undo/Redo Buttons
+
+- [x] Analyze why undo/redo buttons are not working
+- [x] Found issue: saveToHistory() was called AFTER state updates, saving new state instead of old
+- [x] Check if history is being saved correctly
+- [x] Added useEffect to initialize history with empty snapshot on first render
+- [x] Verify historyIndex is updating properly
+- [x] Fix the undo/redo logic
+- [x] Moved all saveToHistory() calls to BEFORE state changes
+- [x] Updated handleAddIssue, handleRemoveIssue, handleDescriptionSave, handleDateSave, confirmDelete
+- [x] Test undo/redo functionality with real edits
