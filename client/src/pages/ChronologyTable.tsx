@@ -619,7 +619,7 @@ export default function ChronologyTable() {
   const hasActiveFilters = selectedPersons.length > 0 || selectedIssues.length > 0 || selectedSources.length > 0;
 
   return (
-    <div className="container py-12">
+    <div className="px-4 py-12" style={{ maxWidth: '98vw', margin: '0 auto' }}>
       {/* Header with Export Buttons */}
       <div className="mb-6">
         <div className="flex items-center justify-between">
@@ -913,60 +913,63 @@ export default function ChronologyTable() {
                   onMouseEnter={() => setHoveredRowId(fact.id)}
                   onMouseLeave={() => setHoveredRowId(null)}
                 >
-                  {/* Date Column - Editable */}
-                  <td className="py-4 px-4 align-top" style={{ fontSize: '14px' }}>
-                    {editingDateId === fact.id ? (
-                      <input
-                        type="date"
-                        value={getDateValue(fact)}
-                        onChange={(e) => handleDateChange(fact.id, e.target.value)}
-                        onBlur={() => handleDateSave(fact.id)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Escape') cancelDateEdit();
-                          if (e.key === 'Enter') handleDateSave(fact.id);
-                        }}
-                        autoFocus
-                        className="w-full text-sm px-2 py-1 border border-muted rounded focus:border-foreground/30 focus:outline-none"
-                      />
-                    ) : (
-                      <span 
-                        className="font-medium text-foreground cursor-pointer hover:bg-foreground/5 px-1 py-0.5 rounded transition-colors"
-                        onClick={() => startEditingDate(fact.id)}
-                      >
-                        {formatDate(fact.eventDate)}
-                      </span>
+                  {/* Date Column - Editable with Floating Editor */}
+                  <td className="py-4 px-4 align-top relative" style={{ fontSize: '14px' }}>
+                    <span 
+                      className="font-medium text-foreground cursor-pointer hover:bg-foreground/5 px-1 py-0.5 rounded transition-colors"
+                      onClick={() => startEditingDate(fact.id)}
+                    >
+                      {formatDate(fact.eventDate)}
+                    </span>
+                    {editingDateId === fact.id && (
+                      <div className="absolute top-0 left-0 w-full z-50">
+                        <input
+                          type="date"
+                          value={getDateValue(fact)}
+                          onChange={(e) => handleDateChange(fact.id, e.target.value)}
+                          onBlur={() => handleDateSave(fact.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Escape') cancelDateEdit();
+                            if (e.key === 'Enter') handleDateSave(fact.id);
+                          }}
+                          autoFocus
+                          className="w-full text-sm px-3 py-2 bg-background border-2 border-foreground/30 rounded shadow-lg focus:border-foreground focus:outline-none"
+                        />
+                      </div>
                     )}
                   </td>
 
-                  {/* Event Description Column - Editable */}
+                  {/* Event Description Column - Editable with Floating Editor */}
                   <td 
-                    className="py-4 px-4 align-top" 
+                    className="py-4 px-4 align-top relative" 
                     style={{ fontSize: '14px', wordWrap: 'break-word', overflowWrap: 'break-word' }}
                     onMouseEnter={() => setHoveredDescriptionId(fact.id)}
                     onMouseLeave={() => setHoveredDescriptionId(null)}
                   >
-                    {editingDescriptionId === fact.id ? (
-                      <Textarea
-                        value={getDescriptionValue(fact)}
-                        onChange={(e) => handleDescriptionChange(fact.id, e.target.value)}
-                        onBlur={() => handleDescriptionSave(fact.id)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Escape') cancelDescriptionEdit();
-                        }}
-                        autoFocus
-                        className="min-h-[80px] text-sm resize-none border-muted focus:border-foreground/30"
-                      />
-                    ) : (
-                      <div 
-                        className="flex items-start gap-2 cursor-pointer hover:bg-foreground/5 p-1 -m-1 rounded transition-colors"
-                        onClick={() => startEditingDescription(fact.id)}
-                      >
-                        <p className="text-foreground leading-relaxed flex-1">
-                          {getDescriptionValue(fact)}
-                        </p>
-                        {hoveredDescriptionId === fact.id && (
-                          <Pencil className="h-3 w-3 text-muted-foreground flex-shrink-0 mt-1" />
-                        )}
+                    <div 
+                      className="flex items-start gap-2 cursor-pointer hover:bg-foreground/5 p-1 -m-1 rounded transition-colors"
+                      onClick={() => startEditingDescription(fact.id)}
+                    >
+                      <p className="text-foreground leading-relaxed flex-1">
+                        {getDescriptionValue(fact)}
+                      </p>
+                      {hoveredDescriptionId === fact.id && (
+                        <Pencil className="h-3 w-3 text-muted-foreground flex-shrink-0 mt-1" />
+                      )}
+                    </div>
+                    {editingDescriptionId === fact.id && (
+                      <div className="absolute top-0 left-0 w-full z-50">
+                        <Textarea
+                          value={getDescriptionValue(fact)}
+                          onChange={(e) => handleDescriptionChange(fact.id, e.target.value)}
+                          onBlur={() => handleDescriptionSave(fact.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Escape') cancelDescriptionEdit();
+                          }}
+                          autoFocus
+                          className="min-h-[80px] text-sm resize-none bg-background border-2 border-foreground/30 rounded shadow-lg focus:border-foreground p-3"
+                          style={{ height: 'auto', minHeight: '80px' }}
+                        />
                       </div>
                     )}
                   </td>
@@ -1012,8 +1015,8 @@ export default function ChronologyTable() {
                                 if (e.key === 'Escape') cancelPersonEdit();
                               }}
                               autoFocus
-                              className="text-xs px-2 py-1 border border-foreground rounded-md focus:outline-none focus:ring-1 focus:ring-[#E07A5F]"
-                              style={{ width: `${Math.max(editingPersonValue.length * 8 + 20, 80)}px` }}
+                              className="text-xs px-2 py-1 border border-foreground rounded-md focus:outline-none focus:ring-1 focus:ring-[#E07A5F] relative z-50"
+                              style={{ width: `${Math.max(editingPersonValue.length * 8 + 20, 150)}px`, minWidth: '150px' }}
                             />
                           );
                         }
@@ -1066,8 +1069,8 @@ export default function ChronologyTable() {
                             }
                           }}
                           placeholder="Add issue..."
-                          className="flex-1 min-w-0 text-xs px-2 py-1 border border-muted rounded focus:border-foreground/30 focus:outline-none"
-                          style={{ width: '100%' }}
+                          className="flex-1 text-xs px-2 py-1 border border-muted rounded focus:border-foreground/30 focus:outline-none"
+                          style={{ width: '100%', minWidth: '150px' }}
                         />
                         <button
                           onClick={() => handleAddIssue(fact.id)}
@@ -1079,15 +1082,29 @@ export default function ChronologyTable() {
                     </div>
                   </td>
 
-                  {/* Comments Column - Editable with scrollbar */}
-                  <td className="py-4 px-4 align-top" style={{ fontSize: '14px', wordWrap: 'break-word', overflowWrap: 'break-word' }}>
-                    <div className="max-h-[100px] overflow-y-auto">
+                  {/* Comments Column - Editable with Floating Auto-Expanding Editor */}
+                  <td className="py-4 px-4 align-top relative" style={{ fontSize: '14px', wordWrap: 'break-word', overflowWrap: 'break-word' }}>
+                    <div 
+                      className="min-h-[60px] cursor-text text-sm text-foreground leading-relaxed"
+                      onClick={(e) => {
+                        // Only start editing if clicking the container, not the floating editor
+                        const target = e.target as HTMLElement;
+                        if (e.currentTarget === e.target || target.tagName !== 'TEXTAREA') {
+                          const textarea = e.currentTarget.querySelector('textarea');
+                          if (textarea) textarea.focus();
+                        }
+                      }}
+                    >
+                      {getCommentValue(fact) || 'Add comments...'}
+                    </div>
+                    <div className="absolute top-0 left-0 w-full z-40">
                       <Textarea
                         value={getCommentValue(fact)}
                         onChange={(e) => handleCommentChange(fact.id, e.target.value)}
                         onBlur={() => handleCommentSave(fact.id)}
                         placeholder="Add comments..."
-                        className="min-h-[60px] text-sm resize-none border-muted focus:border-foreground/30"
+                        className="min-h-[60px] text-sm resize-none bg-background border-2 border-transparent hover:border-foreground/20 focus:border-foreground/30 focus:shadow-lg p-3 transition-all"
+                        style={{ height: 'auto', minHeight: '60px' }}
                       />
                     </div>
                   </td>

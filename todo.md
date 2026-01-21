@@ -620,3 +620,29 @@
 - [x] Add date mutation to facts.update
 - [x] Added eventDate field to facts.update mutation schema
 - [x] Restored column widths after removing Actions column (Date 8%, Description 35%, Actors 15%, Comments 20%)
+
+## Global Layout & Floating Editors
+
+- [x] Change main container to fluid full width
+- [x] Set max-width to 98vw to occupy 98% of viewport width
+- [x] Keep small margins (px-4) to prevent edge touching
+- [x] Removed .container class, applied px-4 py-12 with maxWidth: 98vw
+- [x] Implement floating auto-expanding editor for Date column
+- [x] Date editor positioned absolutely over cell with z-index: 50
+- [x] Date editor matches cell width, auto-expands vertically
+- [x] Add white background, drop shadow, and focused border to Date editor
+- [x] Date input floats above cell with shadow-lg and border-2
+- [x] Implement floating auto-expanding editor for Event Description
+- [x] Description editor positioned absolutely over cell
+- [x] Description editor auto-expands as user types (grows downwards)
+- [x] Textarea with min-h-[80px] and height: auto for expansion
+- [x] Implement floating auto-expanding editor for Comments
+- [x] Comments editor positioned absolutely over cell
+- [x] Comments editor auto-expands vertically without breaking layout
+- [x] Always-visible textarea with transparent border, shadow on focus
+- [x] Add min-width: 150px to Person tag editing input
+- [x] Person input now has minWidth: 150px and z-50 for overlap
+- [x] Add min-width: 150px to Issue tag editing input
+- [x] Issue input has minWidth: 150px for full placeholder visibility
+- [x] Ensure tag inputs can overlap next cell slightly if needed for visibility
+- [x] Added z-50 to Person input for proper layering
