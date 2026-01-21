@@ -666,3 +666,38 @@
 - [x] Ensure flex-wrap: wrap on container for proper line breaking
 - [x] Added flex-wrap to input container div
 - [x] Reduced minWidth from 150px to 120px for better fit
+
+## Ghost Delete Action & Document-Style Inputs
+
+- [x] Remove dedicated delete column entirely
+- [x] Removed delete column header from thead
+- [x] Removed delete column cell from tbody
+- [x] Move trash icon inside Date cell with absolute positioning
+- [x] Position trash icon at far left of Date cell (left: 8px, top: 16px)
+- [x] Set default opacity: 0 for trash icon
+- [x] Show trash icon with opacity: 1 on row hover
+- [x] Added pointerEvents: 'none' when hidden for proper interaction
+- [x] Trash icon takes zero horizontal width in layout
+- [x] Ghost delete floats absolutely, no impact on table layout
+- [x] Style all "Add issue..." inputs as transparent background
+- [x] Applied bg-transparent to Add issue input
+- [x] Style all "Add comment..." inputs as transparent background
+- [x] Applied bg-transparent to Comments textarea
+- [x] Remove default borders from inputs
+- [x] Changed to border-0 border-b for both inputs
+- [x] Add subtle bottom border on hover/focus (optional)
+- [x] Added border-transparent with hover:border-foreground/20 and focus:border-foreground/30
+- [x] Match input font family and size to table text
+- [x] Inputs use text-sm matching table font size
+- [x] Fix Add issue layout with display: flex and flex-wrap: wrap
+- [x] Container already has flex-wrap applied
+- [x] Set Add issue input to min-width: 80px with flex-grow: 1
+- [x] Applied minWidth: 80px and flexGrow: 1 to input style
+- [x] Ensure input drops to new line when space is limited
+- [x] Flex-wrap ensures proper line breaking
+- [x] Apply vertical-align: top to ALL table cells (td)
+- [x] All cells already have align-top class
+- [x] Ensure consistent padding-top: 16px across all cells
+- [x] All cells have py-4 (16px top/bottom padding)
+- [x] Align first line of text in Date, Description, Comments columns
+- [x] Consistent padding ensures perfect alignment across all columns

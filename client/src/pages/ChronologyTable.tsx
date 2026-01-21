@@ -660,10 +660,6 @@ export default function ChronologyTable() {
             {/* Sticky Header */}
             <thead className="sticky top-0 z-10">
               <tr className="bg-foreground text-background">
-                {/* Delete Action Column */}
-                <th className="p-2 text-center" style={{ width: '40px' }}>
-                  {/* Empty header for delete column */}
-                </th>
                 <th className="p-4 text-left font-bold heading relative" style={{ width: '8%' }}>
                   <div className="flex items-center gap-2">
                     <span 
@@ -917,20 +913,22 @@ export default function ChronologyTable() {
                   onMouseEnter={() => setHoveredRowId(fact.id)}
                   onMouseLeave={() => setHoveredRowId(null)}
                 >
-                  {/* Delete Action Column */}
-                  <td className="py-2 px-2 align-middle text-center" style={{ width: '40px' }}>
-                    {hoveredRowId === fact.id && (
-                      <button
-                        onClick={() => handleDeleteFact(fact.id)}
-                        className="text-[#9CA3AF] hover:text-[#EF4444] transition-colors p-1 rounded"
-                        title="Delete this event"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    )}
-                  </td>
-                  {/* Date Column - Editable with Floating Editor */}
+                  {/* Date Column - Editable with Floating Editor & Ghost Delete */}
                   <td className="py-4 px-4 align-top relative" style={{ fontSize: '14px' }}>
+                    {/* Ghost Delete Icon - Floats on left side of Date cell */}
+                    <button
+                      onClick={() => handleDeleteFact(fact.id)}
+                      className="absolute text-[#9CA3AF] hover:text-[#EF4444] transition-all p-1 rounded"
+                      style={{ 
+                        left: '8px', 
+                        top: '16px',
+                        opacity: hoveredRowId === fact.id ? 1 : 0,
+                        pointerEvents: hoveredRowId === fact.id ? 'auto' : 'none'
+                      }}
+                      title="Delete this event"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                     <span 
                       className="font-medium text-foreground cursor-pointer hover:bg-foreground/5 px-1 py-0.5 rounded transition-colors"
                       onClick={() => startEditingDate(fact.id)}
@@ -1085,8 +1083,8 @@ export default function ChronologyTable() {
                             }
                           }}
                           placeholder="Add issue..."
-                          className="flex-1 text-xs px-2 py-1 border border-muted rounded focus:border-foreground/30 focus:outline-none"
-                          style={{ width: '100%', maxWidth: '90%', minWidth: '120px', boxSizing: 'border-box' }}
+                          className="flex-1 text-xs px-2 py-1 bg-transparent border-0 border-b border-transparent hover:border-foreground/20 focus:border-foreground/30 focus:outline-none transition-colors"
+                          style={{ width: '100%', maxWidth: '90%', minWidth: '80px', boxSizing: 'border-box', flexGrow: 1 }}
                         />
                         <button
                           onClick={() => handleAddIssue(fact.id)}
@@ -1119,7 +1117,7 @@ export default function ChronologyTable() {
                         onChange={(e) => handleCommentChange(fact.id, e.target.value)}
                         onBlur={() => handleCommentSave(fact.id)}
                         placeholder="Add comments..."
-                        className="min-h-[60px] text-sm resize-none bg-background border-2 border-transparent hover:border-foreground/20 focus:border-foreground/30 focus:shadow-lg p-3 transition-all"
+                        className="min-h-[60px] text-sm resize-none bg-transparent border-0 border-b border-transparent hover:border-foreground/20 focus:border-foreground/30 p-3 transition-all focus:outline-none"
                         style={{ height: 'auto', minHeight: '60px' }}
                       />
                     </div>
