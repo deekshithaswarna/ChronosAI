@@ -820,3 +820,40 @@
 - [x] Input already has width: 100%, minWidth: 80px, flexGrow: 1
 - [x] Verify input shrinks or wraps without overflowing cell
 - [x] Input configured to fill row when empty, shrink/wrap when tags present
+
+## UX Improvements & Export Modal
+
+- [x] Fix flickering delete button with transition delays
+- [x] Add transition: opacity 0.3s ease to trash icon
+- [x] Add transition-delay of 0.8s when mouse leaves row
+- [x] Button remains visible for 0.8 seconds after hover ends
+- [x] Make table header sticky with position: sticky, top: 0
+- [x] Set z-index: 30 on sticky header
+- [x] Ensure solid black background (#000) on header to prevent content bleed-through
+- [x] Add global text search input above table (top left)
+- [x] Search input placeholder: "Search chronology..."
+- [x] Style search with transparent background, thin border
+- [x] Implement real-time filtering on search input
+- [x] Search scope: Event Description, Source, Actors, Issues, Comments
+- [x] Added globalSearch state and filtering logic in useMemo
+- [ ] Add Undo button (curved arrow left) next to search
+- [ ] Add Redo button (curved arrow right) next to search
+- [ ] Implement history stack for destructive actions
+- [ ] Push state to stack on: edit text, delete row, merge tags
+- [ ] Undo reverts to previous state
+- [ ] Redo moves forward in history
+- [ ] Grey out Undo/Redo buttons when no history available
+- [ ] NOTE: Undo/redo requires deep state management integration - deferred for future implementation
+- [x] Create Export Options dialog modal
+- [x] Modal title: "Export Options"
+- [x] Add checkboxes for: Date, Description, Source, Actors, Issues, Comments
+- [x] Modal triggered by "Export PDF" and "Export Word" buttons
+- [x] Download button in modal generates file with only checked columns
+- [x] Modified exportToPDF to build headers and data based on exportColumns
+- [x] Modified exportToWord to build TableCells based on exportColumns
+- [x] CRITICAL: Preserve delete button positioning (left: -32px on first cell)
+- [x] Delete button positioning preserved in all changes
+- [x] CRITICAL: Maintain overflow: visible !important on table container
+- [x] Overflow: visible maintained on all container divs
+- [x] CRITICAL: Keep exact column width percentages and min-width guardrails
+- [x] No changes made to column widths or min-width values

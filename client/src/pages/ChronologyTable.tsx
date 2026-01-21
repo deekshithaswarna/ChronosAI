@@ -1,10 +1,11 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
-import { ArrowUpDown, Download, Filter, X, Plus, Pencil, Trash2 } from 'lucide-react';
+import { ArrowUpDown, Download, Filter, X, Plus, Pencil, Trash2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Document, Packer, Paragraph, Table, TableCell, TableRow, TextRun, WidthType, AlignmentType, BorderStyle } from 'docx';
@@ -35,6 +36,21 @@ export default function ChronologyTable() {
   const [editingPerson, setEditingPerson] = useState<string | null>(null);
   const [editingPersonValue, setEditingPersonValue] = useState<string>('');
 
+  // Global search state
+  const [globalSearch, setGlobalSearch] = useState('');
+  
+  // Export modal state
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportType, setExportType] = useState<'pdf' | 'word'>('pdf');
+  const [exportColumns, setExportColumns] = useState({
+    date: true,
+    description: true,
+    source: true,
+    actors: true,
+    issues: true,
+    comments: false
+  });
+  
   // Filter state
   const [selectedPersons, setSelectedPersons] = useState<string[]>([]);
   const [selectedIssues, setSelectedIssues] = useState<string[]>([]);
@@ -156,6 +172,26 @@ export default function ChronologyTable() {
       });
     }
     
+    // Apply global search filter
+    if (globalSearch.trim()) {
+      const searchLower = globalSearch.toLowerCase();
+      filtered = filtered.filter(f => {
+        // Search in Event Description
+        if (f.summary && f.summary.toLowerCase().includes(searchLower)) return true;
+        // Search in Source
+        if (f.documentTitle && f.documentTitle.toLowerCase().includes(searchLower)) return true;
+        if (f.documentName && f.documentName.toLowerCase().includes(searchLower)) return true;
+        // Search in Actors
+        if (f.actor && f.actor.toLowerCase().includes(searchLower)) return true;
+        // Search in Issues
+        if (f.issue && f.issue.toLowerCase().includes(searchLower)) return true;
+        if (f.userIssues && f.userIssues.some(issue => issue.toLowerCase().includes(searchLower))) return true;
+        // Search in Comments
+        if (f.comments && f.comments.toLowerCase().includes(searchLower)) return true;
+        return false;
+      });
+    }
+    
     // Apply date filters
     if (dateFilterMode === 'year' && selectedYears.length > 0) {
       filtered = filtered.filter(f => {
@@ -192,7 +228,7 @@ export default function ChronologyTable() {
       
       return sortDirection === 'asc' ? comparison : -comparison;
     });
-  }, [facts, sortField, sortDirection, selectedPersons, selectedIssues, selectedSources, dateFilterMode, selectedYears, selectedMonths, dateRangeFrom, dateRangeTo]);
+  }, [facts, sortField, sortDirection, selectedPersons, selectedIssues, selectedSources, dateFilterMode, selectedYears, selectedMonths, dateRangeFrom, dateRangeTo, globalSearch]);
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
@@ -457,25 +493,38 @@ export default function ChronologyTable() {
     doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
     doc.text(`Total Events: ${filteredAndSortedFacts.length}`, 14, 34);
     
-    // Prepare table data
+    // Build header and column styles based on selected columns
+    const headers: string[] = [];
+    const columnStyles: any = {};
+    let colIndex = 0;
+    
+    if (exportColumns.date) { headers.push('Date'); columnStyles[colIndex++] = { cellWidth: 20 }; }
+    if (exportColumns.description) { headers.push('Event Description'); columnStyles[colIndex++] = { cellWidth: 50 }; }
+    if (exportColumns.source) { headers.push('Source'); columnStyles[colIndex++] = { cellWidth: 35 }; }
+    if (exportColumns.actors) { headers.push('Actors'); columnStyles[colIndex++] = { cellWidth: 25 }; }
+    if (exportColumns.issues) { headers.push('Issues'); columnStyles[colIndex++] = { cellWidth: 30 }; }
+    if (exportColumns.comments) { headers.push('Comments'); columnStyles[colIndex++] = { cellWidth: 30 }; }
+    
+    // Prepare table data with only selected columns
     const tableData = filteredAndSortedFacts.map(fact => {
       const issues = getIssueValue(fact);
       const comments = getCommentValue(fact);
+      const row: string[] = [];
       
-      return [
-        formatDate(fact.eventDate),
-        fact.summary,
-        fact.documentTitle || fact.documentName || 'Unknown',
-        fact.actor || '-',
-        issues && issues.length > 0 ? issues.join(', ') : '-',
-        comments || '-'
-      ];
+      if (exportColumns.date) row.push(formatDate(fact.eventDate));
+      if (exportColumns.description) row.push(fact.summary);
+      if (exportColumns.source) row.push(fact.documentTitle || fact.documentName || 'Unknown');
+      if (exportColumns.actors) row.push(fact.actor || '-');
+      if (exportColumns.issues) row.push(issues && issues.length > 0 ? issues.join(', ') : '-');
+      if (exportColumns.comments) row.push(comments || '-');
+      
+      return row;
     });
     
     // Generate table with autoTable
     autoTable(doc, {
       startY: 40,
-      head: [['Date', 'Event Description', 'Source', 'Actors', 'Issues', 'Comments']],
+      head: [headers],
       body: tableData,
       styles: {
         fontSize: 8,
@@ -488,14 +537,7 @@ export default function ChronologyTable() {
         textColor: [255, 255, 255],
         fontStyle: 'bold'
       },
-      columnStyles: {
-        0: { cellWidth: 20 },  // Date
-        1: { cellWidth: 50 },  // Event Description
-        2: { cellWidth: 35 },  // Source
-        3: { cellWidth: 25 },  // Actors
-        4: { cellWidth: 30 },  // Issues
-        5: { cellWidth: 30 }   // Comments
-      },
+      columnStyles,
       margin: { top: 40, left: 14, right: 14 }
     });
     
@@ -504,64 +546,33 @@ export default function ChronologyTable() {
 
   // Export to Word with filtered data and user edits
   const exportToWord = async () => {
+    // Build header cells based on selected columns
+    const headerCells: TableCell[] = [];
+    if (exportColumns.date) headerCells.push(new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Date', bold: true })] })], width: { size: 15, type: WidthType.PERCENTAGE } }));
+    if (exportColumns.description) headerCells.push(new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Event Description', bold: true })] })], width: { size: 35, type: WidthType.PERCENTAGE } }));
+    if (exportColumns.source) headerCells.push(new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Source', bold: true })] })], width: { size: 20, type: WidthType.PERCENTAGE } }));
+    if (exportColumns.actors) headerCells.push(new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Actors', bold: true })] })], width: { size: 15, type: WidthType.PERCENTAGE } }));
+    if (exportColumns.issues) headerCells.push(new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Issues', bold: true })] })], width: { size: 15, type: WidthType.PERCENTAGE } }));
+    if (exportColumns.comments) headerCells.push(new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Comments', bold: true })] })], width: { size: 15, type: WidthType.PERCENTAGE } }));
+    
     const rows: TableRow[] = [
-      // Header row
-      new TableRow({
-        children: [
-          new TableCell({
-            children: [new Paragraph({ children: [new TextRun({ text: 'Date', bold: true })] })],
-            width: { size: 15, type: WidthType.PERCENTAGE },
-          }),
-          new TableCell({
-            children: [new Paragraph({ children: [new TextRun({ text: 'Event Description', bold: true })] })],
-            width: { size: 35, type: WidthType.PERCENTAGE },
-          }),
-          new TableCell({
-            children: [new Paragraph({ children: [new TextRun({ text: 'Source', bold: true })] })],
-            width: { size: 20, type: WidthType.PERCENTAGE },
-          }),
-          new TableCell({
-            children: [new Paragraph({ children: [new TextRun({ text: 'Person', bold: true })] })],
-            width: { size: 15, type: WidthType.PERCENTAGE },
-          }),
-          new TableCell({
-            children: [new Paragraph({ children: [new TextRun({ text: 'Issues', bold: true })] })],
-            width: { size: 15, type: WidthType.PERCENTAGE },
-          }),
-        ],
-        tableHeader: true,
-      }),
+      new TableRow({ children: headerCells, tableHeader: true }),
     ];
 
-    // Data rows
+    // Data rows with only selected columns
     filteredAndSortedFacts.forEach((fact) => {
       const issues = getIssueValue(fact);
       const comments = getCommentValue(fact);
+      const dataCells: TableCell[] = [];
       
-      rows.push(
-        new TableRow({
-          children: [
-            new TableCell({
-              children: [new Paragraph(formatDate(fact.eventDate))],
-            }),
-            new TableCell({
-              children: [
-                new Paragraph(fact.summary),
-                ...(comments ? [new Paragraph({ children: [new TextRun({ text: `Comments: ${comments}`, italics: true })] })] : []),
-              ],
-            }),
-            new TableCell({
-              children: [new Paragraph(fact.documentTitle || fact.documentName || 'Unknown')],
-            }),
-            new TableCell({
-              children: [new Paragraph(fact.actor || '-')],
-            }),
-            new TableCell({
-              children: [new Paragraph(issues && issues.length > 0 ? issues.join(', ') : '-')],
-            }),
-          ],
-        })
-      );
+      if (exportColumns.date) dataCells.push(new TableCell({ children: [new Paragraph(formatDate(fact.eventDate))] }));
+      if (exportColumns.description) dataCells.push(new TableCell({ children: [new Paragraph(fact.summary)] }));
+      if (exportColumns.source) dataCells.push(new TableCell({ children: [new Paragraph(fact.documentTitle || fact.documentName || 'Unknown')] }));
+      if (exportColumns.actors) dataCells.push(new TableCell({ children: [new Paragraph(fact.actor || '-')] }));
+      if (exportColumns.issues) dataCells.push(new TableCell({ children: [new Paragraph(issues && issues.length > 0 ? issues.join(', ') : '-')] }));
+      if (exportColumns.comments) dataCells.push(new TableCell({ children: [new Paragraph(comments || '-')] }));
+      
+      rows.push(new TableRow({ children: dataCells }));
     });
 
     const table = new Table({
@@ -641,15 +652,30 @@ export default function ChronologyTable() {
             )}
           </div>
           <div className="flex gap-2">
-            <Button className="gap-2" onClick={exportToPDF}>
+            <Button className="gap-2" onClick={() => { setExportType('pdf'); setShowExportModal(true); }}>
               <Download className="h-4 w-4" />
               Export PDF
             </Button>
-            <Button className="gap-2" onClick={exportToWord}>
+            <Button className="gap-2" onClick={() => { setExportType('word'); setShowExportModal(true); }}>
               <Download className="h-4 w-4" />
               Export Word
             </Button>
           </div>
+        </div>
+      </div>
+
+      {/* Global Search */}
+      <div className="mb-4">
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            type="text"
+            value={globalSearch}
+            onChange={(e) => setGlobalSearch(e.target.value)}
+            placeholder="Search chronology..."
+            className="w-full pl-10 pr-4 py-2 bg-transparent border border-foreground/20 rounded-md text-sm focus:outline-none focus:border-foreground/40 transition-colors"
+            style={{ border: '1px solid rgba(0,0,0,0.2)' }}
+          />
         </div>
       </div>
 
@@ -658,7 +684,7 @@ export default function ChronologyTable() {
         <div style={{ overflow: 'visible' }}>
           <table className="w-full border-collapse legal-table" style={{ tableLayout: 'fixed', overflow: 'visible' }}>
             {/* Sticky Header */}
-            <thead className="sticky top-0 z-10">
+            <thead className="sticky top-0 z-30" style={{ backgroundColor: '#000' }}>
               <tr className="bg-foreground text-background">
                 <th className="p-4 text-left font-bold heading relative" style={{ width: '8%', minWidth: '90px' }}>
                   <div className="flex items-center gap-2">
@@ -949,7 +975,9 @@ export default function ChronologyTable() {
                         left: '-32px', 
                         top: '16px',
                         opacity: hoveredRowId === fact.id ? 1 : 0,
-                        pointerEvents: hoveredRowId === fact.id ? 'auto' : 'none'
+                        pointerEvents: hoveredRowId === fact.id ? 'auto' : 'none',
+                        transition: 'opacity 0.3s ease, color 0.2s ease',
+                        transitionDelay: hoveredRowId === fact.id ? '0s' : '0.8s'
                       }}
                       title="Delete this event"
                     >
@@ -1142,6 +1170,78 @@ export default function ChronologyTable() {
           </table>
         </div>
       </div>
+
+      {/* Export Options Modal */}
+      <Dialog open={showExportModal} onOpenChange={setShowExportModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Export Options</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">Select which columns to include in the export:</p>
+            <div className="space-y-3">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <Checkbox
+                  checked={exportColumns.date}
+                  onCheckedChange={(checked) => setExportColumns(prev => ({ ...prev, date: !!checked }))}
+                />
+                <span className="text-sm">Date</span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <Checkbox
+                  checked={exportColumns.description}
+                  onCheckedChange={(checked) => setExportColumns(prev => ({ ...prev, description: !!checked }))}
+                />
+                <span className="text-sm">Event Description</span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <Checkbox
+                  checked={exportColumns.source}
+                  onCheckedChange={(checked) => setExportColumns(prev => ({ ...prev, source: !!checked }))}
+                />
+                <span className="text-sm">Source</span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <Checkbox
+                  checked={exportColumns.actors}
+                  onCheckedChange={(checked) => setExportColumns(prev => ({ ...prev, actors: !!checked }))}
+                />
+                <span className="text-sm">Actors</span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <Checkbox
+                  checked={exportColumns.issues}
+                  onCheckedChange={(checked) => setExportColumns(prev => ({ ...prev, issues: !!checked }))}
+                />
+                <span className="text-sm">Issues</span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <Checkbox
+                  checked={exportColumns.comments}
+                  onCheckedChange={(checked) => setExportColumns(prev => ({ ...prev, comments: !!checked }))}
+                />
+                <span className="text-sm">Comments</span>
+              </label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowExportModal(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => {
+              if (exportType === 'pdf') {
+                exportToPDF();
+              } else {
+                exportToWord();
+              }
+              setShowExportModal(false);
+            }}>
+              <Download className="h-4 w-4 mr-2" />
+              Download {exportType === 'pdf' ? 'PDF' : 'Word'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
