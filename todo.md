@@ -857,3 +857,25 @@
 - [x] Overflow: visible maintained on all container divs
 - [x] CRITICAL: Keep exact column width percentages and min-width guardrails
 - [x] No changes made to column widths or min-width values
+
+## Tag Overflow Fix & Undo/Redo Buttons
+
+- [x] Fix Actor tag overflow with word-break styling
+- [x] Apply white-space: normal to Actor tags
+- [x] Apply display: inline-block to Actor tags
+- [x] Apply word-break: break-word to Actor tags
+- [x] Added style prop to Actor Badge with all three properties
+- [x] Verify Issue tags already have word-break styling
+- [x] Issue tags already have word-break styling applied
+- [x] Add Undo button next to search bar
+- [x] Add Redo button next to search bar
+- [x] Style buttons with curved arrow icons (Undo, Redo from lucide-react)
+- [x] Position buttons to the right of search input
+- [x] Buttons positioned in flex container next to search
+- [ ] Add basic undo/redo state management
+- [ ] Track history of destructive operations
+- [ ] Implement undo functionality
+- [ ] Implement redo functionality
+- [x] Grey out buttons when no history available
+- [x] Buttons currently disabled with "Coming Soon" tooltip
+- [ ] NOTE: Full undo/redo implementation requires state history tracking - marked as disabled for now

@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
-import { ArrowUpDown, Download, Filter, X, Plus, Pencil, Trash2, Search } from 'lucide-react';
+import { ArrowUpDown, Download, Filter, X, Plus, Pencil, Trash2, Search, Undo, Redo } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
@@ -664,9 +664,9 @@ export default function ChronologyTable() {
         </div>
       </div>
 
-      {/* Global Search */}
-      <div className="mb-4">
-        <div className="relative max-w-md">
+      {/* Global Search & Undo/Redo */}
+      <div className="mb-4 flex items-center gap-3">
+        <div className="relative max-w-md flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
@@ -676,6 +676,28 @@ export default function ChronologyTable() {
             className="w-full pl-10 pr-4 py-2 bg-transparent border border-foreground/20 rounded-md text-sm focus:outline-none focus:border-foreground/40 transition-colors"
             style={{ border: '1px solid rgba(0,0,0,0.2)' }}
           />
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled
+            title="Undo (Coming Soon)"
+            className="gap-2"
+          >
+            <Undo className="h-4 w-4" />
+            Undo
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled
+            title="Redo (Coming Soon)"
+            className="gap-2"
+          >
+            <Redo className="h-4 w-4" />
+            Redo
+          </Button>
         </div>
       </div>
 
@@ -1096,6 +1118,7 @@ export default function ChronologyTable() {
                             variant="secondary" 
                             className="text-xs cursor-pointer hover:bg-[#E07A5F] hover:text-white transition-colors flex items-center gap-1"
                             onClick={() => startEditingPerson(trimmed)}
+                            style={{ whiteSpace: 'normal', display: 'inline-block', wordBreak: 'break-word' }}
                           >
                             {trimmed}
                             <Pencil className="h-3 w-3" />
