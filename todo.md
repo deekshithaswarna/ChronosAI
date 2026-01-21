@@ -291,3 +291,42 @@
 - [x] Configured column widths for optimal layout
 - [x] Set overflow: 'linebreak' for text wrapping
 - [x] Black header with white text styling
+## Bug Fixes & New Features (User Feedback)
+
+### Visual Corrections - Flat Aesthetic
+- [x] Fix upload zone background to be transparent or match #F9F9F4 exactly
+- [x] Fix "Recent Uploads" list background to match global #F9F9F4
+- [x] Fix table body background to match global #F9F9F4 (subtle zebra striping OK)
+- [x] Remove any darker/different beige shades throughout the app
+
+### Smart Title Generation (Urgent Bug Fix)
+- [x] Update upload pipeline to read first 2 pages immediately after upload
+- [x] Add LLM call to extract formal legal title from first 2 pages
+- [x] Display Smart Title in "Recent Uploads" list instead of filename
+- [ ] Display Smart Title + page number in Source column (e.g., "Witness Statement of John Doe, p.1")
+- [x] Store Smart Title in database during upload process
+- [x] Added extractFirstPages function to documentExtractor
+- [x] Added extractSmartTitle function with LLM JSON schema
+- [x] Smart Title extracted immediately on upload before async processing
+
+### Person Tagging Fixes
+- [x] Force AI to output persons as strict JSON Array of Strings (no grouped names)
+- [x] Ensure each person name is a separate tag (split "Person A, Person B" into ["Person A", "Person B"])
+- [x] Add "Rename & Merge" feature for person tags
+- [x] Allow user to click any Person tag and edit the text
+- [x] Update ALL occurrences of renamed tag throughout the table (merge duplicates)
+- [x] Example: Rename "Mayolo (Bear Creek)" to "Mayolo" merges all instances
+- [x] Updated LLM prompt to output comma-separated actors
+- [x] Added renamePersonInFacts function in db.ts
+- [x] Added renamePerson tRPC mutation
+- [x] Made person tags clickable with hover effect
+- [x] Implemented prompt-based rename UI with table refresh
+
+### Source Column Logic Fix
+- [x] Line 1: Display Smart Title of uploaded file + page number as hyperlink
+- [x] Line 2: Display referenced documents (Exhibits) in smaller grey text below
+- [x] Format: "Other potential sources referenced in uploaded documents: [Name of referenced document]"
+- [x] Separate uploaded file source from referenced exhibit sources
+- [x] Added pageNumber to getUserFacts query
+- [x] Source column now shows "Smart Title, p.X" as hyperlink
+- [x] Citation field displays as grey text with proper formatting

@@ -63,7 +63,7 @@ DOCUMENT TITLE:
 FACT EXTRACTION - FOCUS ON:
 - Date: Exact date (calculate if relative like "the following day" or "two weeks later")
 - Time: Specific time if mentioned (e.g., "3:00 PM", "morning")
-- Actor: Who performed the action (person, company, entity)
+- Actor: Who performed the action. IMPORTANT: If multiple people/entities are involved, list them as comma-separated values (e.g., "John Doe, Jane Smith, ABC Corp"). Each name should be a separate entity.
 - Event: What happened (be specific and concise)
 - Importance: Rate 1-10 (10 = critical legal event like filing, verdict; 1 = minor administrative)
 

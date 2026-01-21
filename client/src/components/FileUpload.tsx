@@ -98,9 +98,9 @@ export function FileUpload({ onUploadComplete }: { onUploadComplete?: () => void
     <div className="space-y-4">
       <Card
         {...getRootProps()}
-        className={`border-2 border-dashed rounded-none p-12 text-center cursor-pointer transition-all duration-200 ${
+        className={`border-2 border-dashed rounded-none p-12 text-center cursor-pointer transition-all duration-200 bg-transparent ${
           isDragActive
-            ? 'border-foreground bg-accent/30'
+            ? 'border-foreground'
             : 'border-foreground/40 hover:border-foreground/70'
         }`}
       >
@@ -123,7 +123,7 @@ export function FileUpload({ onUploadComplete }: { onUploadComplete?: () => void
       {files.length > 0 && (
         <div className="space-y-2">
           {files.map((file, index) => (
-            <Card key={index} className="p-4">
+            <Card key={index} className="p-4 bg-transparent border-none shadow-none">
               <div className="flex items-center gap-3">
                 <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                 <div className="flex-1 min-w-0">

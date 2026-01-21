@@ -16,6 +16,40 @@ export interface PagedText {
 }
 
 /**
+ * Extract only first N pages from PDF (for title extraction)
+ */
+export async function extractFirstPages(fileBuffer: Buffer, maxPages: number = 2): Promise<string> {
+  try {
+    const pdfParse = require('pdf-parse');
+    
+    let extractedText = '';
+    let pageCount = 0;
+    
+    await pdfParse(fileBuffer, {
+      max: maxPages,
+      pagerender: (pageData: any) => {
+        return pageData.getTextContent().then((textContent: any) => {
+          if (pageCount < maxPages) {
+            const pageText = textContent.items.map((item: any) => item.str).join(' ');
+            extractedText += pageText + '\n';
+            pageCount++;
+          }
+          return '';
+        });
+      },
+    });
+    
+    return extractedText;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (errorMessage.includes('password') || errorMessage.includes('encrypted')) {
+      throw new Error('This PDF is password-protected. Please provide an unlocked version.');
+    }
+    throw new Error(`Failed to extract first pages from PDF: ${errorMessage}`);
+  }
+}
+
+/**
  * Pass 1: Extract text from PDF with page number tracking
  * Uses classic pdf-parse v1 API - simple and battle-tested
  */

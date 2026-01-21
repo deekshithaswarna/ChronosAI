@@ -169,6 +169,7 @@ export async function getUserFacts(userId: number) {
       citation: facts.citation,
       comments: facts.comments,
       confidence: facts.confidence,
+      pageNumber: facts.pageNumber,
       createdAt: facts.createdAt,
       updatedAt: facts.updatedAt,
       documentName: documents.filename,
@@ -200,6 +201,28 @@ export async function updateFact(id: number, updates: { userIssues?: string[]; c
       updatedAt: new Date()
     })
     .where(eq(facts.id, id));
+}
+
+export async function renamePersonInFacts(userId: number, oldName: string, newName: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Get all facts for this user
+  const userFacts = await db.select().from(facts).where(eq(facts.userId, userId));
+  
+  // Update each fact that contains the old person name
+  for (const fact of userFacts) {
+    if (fact.actor && fact.actor.includes(oldName)) {
+      // Split actors by comma/semicolon, replace old name with new name, rejoin
+      const actors = fact.actor.split(/[,;]/).map(a => a.trim());
+      const updatedActors = actors.map(actor => actor === oldName ? newName : actor);
+      const newActorString = updatedActors.join(', ');
+      
+      await db.update(facts)
+        .set({ actor: newActorString, updatedAt: new Date() })
+        .where(eq(facts.id, fact.id));
+    }
+  }
 }
 
 export async function deleteDocument(id: number, userId: number) {

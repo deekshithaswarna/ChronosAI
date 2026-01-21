@@ -30,7 +30,7 @@ export function DocumentsList() {
 
   if (!documents || documents.length === 0) {
     return (
-      <Card className="p-12 text-center">
+      <Card className="p-12 text-center bg-transparent border-none shadow-none">
         <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
         <h3 className="text-lg font-semibold mb-2">No documents yet</h3>
         <p className="text-sm text-muted-foreground">
@@ -43,7 +43,7 @@ export function DocumentsList() {
   return (
     <div className="space-y-3">
       {documents.map(doc => (
-        <Card key={doc.id} className="p-4 hover:shadow-lg transition-all duration-200 hover:scale-[1.01]">
+        <Card key={doc.id} className="p-4 bg-transparent border border-foreground/20 shadow-none hover:border-foreground/40 transition-all duration-200">
           <div className="flex items-start gap-4">
             <div className="p-2 bg-muted rounded-lg flex-shrink-0">
               <FileText className="h-5 w-5 text-muted-foreground" />

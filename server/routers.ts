@@ -42,7 +42,20 @@ export const appRouter = router({
         const fileKey = `${userId}/documents/${nanoid()}-${input.filename}`;
         const { url: s3Url } = await storagePut(fileKey, fileBuffer, input.mimeType);
         
-        // Create document record
+        // Extract Smart Title from first 2 pages immediately (for PDFs)
+        let smartTitle = input.filename;
+        if (input.mimeType === 'application/pdf') {
+          try {
+            const { extractFirstPages } = await import('./documentExtractor');
+            const firstPagesText = await extractFirstPages(fileBuffer, 2);
+            smartTitle = await extractSmartTitle(firstPagesText);
+          } catch (error) {
+            console.error('Failed to extract smart title:', error);
+            // Fall back to filename if extraction fails
+          }
+        }
+        
+        // Create document record with Smart Title
         const documentId = await db.createDocument({
           userId,
           filename: input.filename,
@@ -52,6 +65,7 @@ export const appRouter = router({
           s3Key: fileKey,
           s3Url,
           status: "pending",
+          documentTitle: smartTitle,
         });
         
         // Trigger async processing (don't await)
@@ -119,7 +133,7 @@ export const appRouter = router({
         return filtered;
       }),
 
-    // Update fact (for editable fields)
+    // Update fact (for user-editable fields)
     update: protectedProcedure
       .input(z.object({
         id: z.number(),
@@ -131,6 +145,17 @@ export const appRouter = router({
           userIssues: input.userIssues,
           comments: input.comments,
         });
+        return { success: true };
+      }),
+
+    // Rename person across all facts (merge duplicates)
+    renamePerson: protectedProcedure
+      .input(z.object({
+        oldName: z.string(),
+        newName: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.renamePersonInFacts(ctx.user.id, input.oldName, input.newName);
         return { success: true };
       }),
   }),
@@ -149,6 +174,55 @@ export const appRouter = router({
 });
 
 export type AppRouter = typeof appRouter;
+
+// Extract Smart Title from first 2 pages using LLM
+async function extractSmartTitle(firstPagesText: string): Promise<string> {
+  try {
+    const { invokeLLM } = await import('./_core/llm');
+    
+    const response = await invokeLLM({
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a legal document analyzer. Extract the formal legal title of the document from the provided text. Return ONLY the title, nothing else. Examples: "Witness Statement of John Doe", "Arbitration Award in Case No. 12345", "Expert Report by Dr. Jane Smith"'
+        },
+        {
+          role: 'user',
+          content: `Extract the formal legal title from this document:\n\n${firstPagesText.substring(0, 3000)}`
+        }
+      ],
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: 'document_title',
+          strict: true,
+          schema: {
+            type: 'object',
+            properties: {
+              title: {
+                type: 'string',
+                description: 'The formal legal title of the document'
+              }
+            },
+            required: ['title'],
+            additionalProperties: false
+          }
+        }
+      }
+    });
+    
+    const content = response.choices[0]?.message?.content;
+    if (content && typeof content === 'string') {
+      const parsed = JSON.parse(content);
+      return parsed.title || 'Untitled Document';
+    }
+    
+    return 'Untitled Document';
+  } catch (error) {
+    console.error('Failed to extract smart title:', error);
+    return 'Untitled Document';
+  }
+}
 
 // Async document processing function
 async function processDocumentAsync(documentId: number, s3Url: string, mimeType: string, filename: string) {

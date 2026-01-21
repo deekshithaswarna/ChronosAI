@@ -201,6 +201,24 @@ export default function ChronologyTable() {
     utils.facts.list.invalidate();
   };
 
+  // Rename person across all facts (merge duplicates)
+  const renamePersonMutation = trpc.facts.renamePerson.useMutation();
+  const handleRenamePerson = async (oldName: string) => {
+    const newName = prompt(`Rename "${oldName}" to:`, oldName);
+    if (!newName || newName === oldName) return;
+    
+    try {
+      await renamePersonMutation.mutateAsync({
+        oldName,
+        newName: newName.trim(),
+      });
+      utils.facts.list.invalidate();
+      alert(`Successfully renamed "${oldName}" to "${newName}" across all events.`);
+    } catch (error) {
+      alert(`Failed to rename person: ${error}`);
+    }
+  };
+
   // Save Comments field on blur
   const handleCommentSave = async (factId: number) => {
     const newValue = editedComments[factId];
@@ -563,8 +581,8 @@ export default function ChronologyTable() {
               {filteredAndSortedFacts.map((fact, index) => (
                 <tr 
                   key={fact.id}
-                  className={`border-t border-foreground/10 hover:bg-muted/50 transition-colors ${
-                    index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                  className={`border-t border-foreground/10 hover:bg-foreground/5 transition-colors ${
+                    index % 2 === 0 ? 'bg-transparent' : 'bg-foreground/[0.02]'
                   }`}
                 >
                   {/* Date Column */}
@@ -591,10 +609,11 @@ export default function ChronologyTable() {
                         className="font-semibold text-foreground hover:text-[#E07A5F] hover:underline transition-colors"
                       >
                         {fact.documentTitle || fact.documentName || 'Unknown'}
+                        {fact.pageNumber && `, p.${fact.pageNumber}`}
                       </a>
                       {fact.citation && (
-                        <div className="text-muted-foreground mt-1 text-xs">
-                          {fact.citation}
+                        <div className="text-muted-foreground mt-2 text-xs">
+                          Other potential sources referenced in uploaded documents: {fact.citation}
                         </div>
                       )}
                     </div>
@@ -607,7 +626,12 @@ export default function ChronologyTable() {
                         const trimmed = person.trim();
                         if (!trimmed) return null;
                         return (
-                          <Badge key={idx} variant="secondary" className="text-xs">
+                          <Badge 
+                            key={idx} 
+                            variant="secondary" 
+                            className="text-xs cursor-pointer hover:bg-[#E07A5F] hover:text-white transition-colors"
+                            onClick={() => handleRenamePerson(trimmed)}
+                          >
                             {trimmed}
                           </Badge>
                         );
