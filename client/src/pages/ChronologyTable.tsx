@@ -51,6 +51,20 @@ export default function ChronologyTable() {
     comments: false
   });
   
+  // Delete confirmation modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [factToDelete, setFactToDelete] = useState<number | null>(null);
+  
+  // History management for undo/redo
+  type HistorySnapshot = {
+    editedIssues: Record<number, string[]>;
+    editedComments: Record<number, string>;
+    editedDescriptions: Record<number, string>;
+    editedDates: Record<number, string>;
+  };
+  const [history, setHistory] = useState<HistorySnapshot[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  
   // Filter state
   const [selectedPersons, setSelectedPersons] = useState<string[]>([]);
   const [selectedIssues, setSelectedIssues] = useState<string[]>([]);
@@ -289,6 +303,7 @@ export default function ChronologyTable() {
     const currentIssues = getIssueValue({ id: factId, ...facts?.find(f => f.id === factId) });
     const updatedIssues = [...currentIssues, newIssue];
     
+    saveToHistory();
     setEditedIssues(prev => ({ ...prev, [factId]: updatedIssues }));
     setNewIssueInputs(prev => ({ ...prev, [factId]: '' }));
     
@@ -304,6 +319,7 @@ export default function ChronologyTable() {
     const currentIssues = getIssueValue({ id: factId, ...facts?.find(f => f.id === factId) });
     const updatedIssues = currentIssues.filter(issue => issue !== issueToRemove);
     
+    saveToHistory();
     setEditedIssues(prev => ({ ...prev, [factId]: updatedIssues }));
     
     await updateFactMutation.mutateAsync({
@@ -394,10 +410,56 @@ export default function ChronologyTable() {
     setEditedDescriptions(prev => ({ ...prev, [factId]: value }));
   };
 
+  // History management functions
+  const saveToHistory = () => {
+    const snapshot: HistorySnapshot = {
+      editedIssues: { ...editedIssues },
+      editedComments: { ...editedComments },
+      editedDescriptions: { ...editedDescriptions },
+      editedDates: { ...editedDates },
+    };
+    
+    const newHistory = history.slice(0, historyIndex + 1);
+    newHistory.push(snapshot);
+    
+    if (newHistory.length > 50) {
+      newHistory.shift();
+    } else {
+      setHistoryIndex(historyIndex + 1);
+    }
+    
+    setHistory(newHistory);
+  };
+  
+  const handleUndo = () => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      const snapshot = history[newIndex];
+      setEditedIssues(snapshot.editedIssues);
+      setEditedComments(snapshot.editedComments);
+      setEditedDescriptions(snapshot.editedDescriptions);
+      setEditedDates(snapshot.editedDates);
+      setHistoryIndex(newIndex);
+    }
+  };
+  
+  const handleRedo = () => {
+    if (historyIndex < history.length - 1) {
+      const newIndex = historyIndex + 1;
+      const snapshot = history[newIndex];
+      setEditedIssues(snapshot.editedIssues);
+      setEditedComments(snapshot.editedComments);
+      setEditedDescriptions(snapshot.editedDescriptions);
+      setEditedDates(snapshot.editedDates);
+      setHistoryIndex(newIndex);
+    }
+  };
+
   // Save Event Description field on blur
   const handleDescriptionSave = async (factId: number) => {
     const newValue = editedDescriptions[factId];
     if (newValue !== undefined) {
+      saveToHistory();
       await updateFactMutation.mutateAsync({
         id: factId,
         summary: newValue,
@@ -421,14 +483,20 @@ export default function ChronologyTable() {
   const deleteFactMutation = trpc.facts.delete.useMutation();
 
   // Handle fact deletion
-  const handleDeleteFact = async (factId: number) => {
-    if (!confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
-      return;
-    }
+  const handleDeleteFact = (factId: number) => {
+    setFactToDelete(factId);
+    setShowDeleteModal(true);
+  };
+  
+  const confirmDelete = async () => {
+    if (factToDelete === null) return;
     
     try {
-      await deleteFactMutation.mutateAsync({ id: factId });
+      saveToHistory();
+      await deleteFactMutation.mutateAsync({ id: factToDelete });
       utils.facts.list.invalidate();
+      setShowDeleteModal(false);
+      setFactToDelete(null);
     } catch (error) {
       console.error('Failed to delete fact:', error);
       alert('Failed to delete event. Please try again.');
@@ -454,6 +522,7 @@ export default function ChronologyTable() {
     const newDateValue = editedDates[factId];
     if (newDateValue !== undefined) {
       try {
+        saveToHistory();
         // Convert YYYY-MM-DD to Date object
         const newDate = new Date(newDateValue);
         await updateFactMutation.mutateAsync({
@@ -681,8 +750,9 @@ export default function ChronologyTable() {
           <Button
             variant="outline"
             size="sm"
-            disabled
-            title="Undo (Coming Soon)"
+            disabled={historyIndex <= 0}
+            onClick={handleUndo}
+            title="Undo (Cmd/Ctrl+Z)"
             className="gap-2"
           >
             <Undo className="h-4 w-4" />
@@ -691,8 +761,9 @@ export default function ChronologyTable() {
           <Button
             variant="outline"
             size="sm"
-            disabled
-            title="Redo (Coming Soon)"
+            disabled={historyIndex >= history.length - 1}
+            onClick={handleRedo}
+            title="Redo (Cmd/Ctrl+Shift+Z)"
             className="gap-2"
           >
             <Redo className="h-4 w-4" />
@@ -1040,6 +1111,7 @@ export default function ChronologyTable() {
                     <div 
                       className="flex items-start gap-2 cursor-pointer hover:bg-foreground/5 p-1 -m-1 rounded transition-colors"
                       onClick={() => startEditingDescription(fact.id)}
+                      style={{ visibility: editingDescriptionId === fact.id ? 'hidden' : 'visible' }}
                     >
                       <p className="text-foreground leading-relaxed flex-1">
                         {getDescriptionValue(fact)}
@@ -1261,6 +1333,35 @@ export default function ChronologyTable() {
             }}>
               <Download className="h-4 w-4 mr-2" />
               Download {exportType === 'pdf' ? 'PDF' : 'Word'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Event?</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-foreground">
+              Are you sure you want to delete this event? This action can be undone.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDeleteModal(false)}
+              className="border-foreground text-foreground hover:bg-foreground/10"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={confirmDelete}
+              className="bg-foreground text-background hover:bg-foreground/90"
+            >
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>
