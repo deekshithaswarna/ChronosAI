@@ -116,3 +116,20 @@
 - [x] Fix file handling in upload endpoint (pdf-parse debug mode issue)
 - [x] Test upload with real document through UI (ready for user testing)
 - [x] Provide written root cause analysis (ROOT_CAUSE_ANALYSIS.md)
+
+## Debug Slow PDF Processing
+- [x] Check server logs for processing status
+- [x] Identify bottleneck (text extraction vs LLM call)
+- [x] Processing time is expected (2-3 minutes for PDF + LLM)
+- [ ] Add processing progress logging
+
+## UI Redesign
+- [x] Remove tabs from landing page
+- [x] Show upload + documents list on main page
+- [x] Create separate Timeline tab with document-date organization
+- [x] Add filtering by issue, document type, person
+- [x] Add PDF export for timeline table
+- [x] Add Word export for timeline table
+- [x] Remove old Data Table tab
+- [ ] Add tagging system UI (add/edit tags to documents)
+- [ ] Add document type field to schema
