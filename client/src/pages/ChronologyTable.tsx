@@ -660,7 +660,7 @@ export default function ChronologyTable() {
             {/* Sticky Header */}
             <thead className="sticky top-0 z-10">
               <tr className="bg-foreground text-background">
-                <th className="p-4 text-left font-bold heading relative" style={{ width: '8%' }}>
+                <th className="p-4 text-left font-bold heading relative" style={{ width: '8%', minWidth: '90px' }}>
                   <div className="flex items-center gap-2">
                     <span 
                       className="cursor-pointer hover:opacity-70 transition-opacity"
@@ -788,11 +788,11 @@ export default function ChronologyTable() {
                 </th>
                 <th 
                   className="p-4 text-left font-bold heading"
-                  style={{ width: '35%' }}
+                  style={{ width: '35%', minWidth: '300px' }}
                 >
                   Event Description
                 </th>
-                <th className="p-4 text-left font-bold heading relative" style={{ width: '12%' }}>
+                <th className="p-4 text-left font-bold heading relative" style={{ width: '12%', minWidth: '110px' }}>
                   <div className="flex items-center gap-2">
                     Source
                     <button
@@ -805,26 +805,36 @@ export default function ChronologyTable() {
                   
                   {/* Source Filter Dropdown */}
                   {showSourceFilter && (
-                    <div ref={sourceFilterRef} className="absolute top-full left-0 mt-1 bg-background border border-border rounded-md shadow-lg p-4 z-20 min-w-[250px] max-h-[300px] overflow-y-auto">
-                      {uniqueSources.map(source => (
-                        <label key={source} className="flex items-center gap-2 p-2 hover:bg-accent rounded cursor-pointer">
-                          <Checkbox
-                            checked={selectedSources.includes(source)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setSelectedSources([...selectedSources, source]);
-                              } else {
-                                setSelectedSources(selectedSources.filter(s => s !== source));
-                              }
-                            }}
-                          />
-                          <span className="text-sm text-black">{source}</span>
-                        </label>
-                      ))}
+                    <div ref={sourceFilterRef} className="absolute top-full left-0 mt-1 bg-background border border-border rounded-md shadow-lg p-4 z-20 min-w-[250px]">
+                      <div className="max-h-[300px] overflow-y-auto">
+                        {uniqueSources.map(source => (
+                          <label key={source} className="flex items-center gap-2 p-2 hover:bg-accent rounded cursor-pointer">
+                            <Checkbox
+                              checked={selectedSources.includes(source)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedSources([...selectedSources, source]);
+                                } else {
+                                  setSelectedSources(selectedSources.filter(s => s !== source));
+                                }
+                              }}
+                            />
+                            <span className="text-sm text-black">{source}</span>
+                          </label>
+                        ))}
+                      </div>
+                      {selectedSources.length > 0 && (
+                        <button
+                          onClick={() => setSelectedSources([])}
+                          className="mt-3 w-full px-3 py-1.5 text-xs bg-muted hover:bg-muted/80 rounded transition-colors"
+                        >
+                          Clear Filter
+                        </button>
+                      )}
                     </div>
                   )}
                 </th>
-                <th className="p-4 text-left font-bold heading relative" style={{ width: '15%' }}>
+                <th className="p-4 text-left font-bold heading relative" style={{ width: '15%', minWidth: '140px' }}>
                   <div className="flex items-center gap-2">
                     Actors
                     <button
@@ -857,10 +867,18 @@ export default function ChronologyTable() {
                           ))
                         )}
                       </div>
+                      {selectedPersons.length > 0 && (
+                        <button
+                          onClick={() => setSelectedPersons([])}
+                          className="mt-3 w-full px-3 py-1.5 text-xs bg-muted hover:bg-muted/80 rounded transition-colors"
+                        >
+                          Clear Filter
+                        </button>
+                      )}
                     </div>
                   )}
                 </th>
-                <th className="p-4 text-left font-bold heading relative" style={{ width: '10%' }}>
+                <th className="p-4 text-left font-bold heading relative" style={{ width: '10%', minWidth: '130px' }}>
                   <div className="flex items-center gap-2">
                     Issues
                     <button
@@ -893,10 +911,18 @@ export default function ChronologyTable() {
                           ))
                         )}
                       </div>
+                      {selectedIssues.length > 0 && (
+                        <button
+                          onClick={() => setSelectedIssues([])}
+                          className="mt-3 w-full px-3 py-1.5 text-xs bg-muted hover:bg-muted/80 rounded transition-colors"
+                        >
+                          Clear Filter
+                        </button>
+                      )}
                     </div>
                   )}
                 </th>
-                <th className="p-4 text-left font-bold heading" style={{ width: '20%' }}>
+                <th className="p-4 text-left font-bold heading" style={{ width: '20%', minWidth: '180px' }}>
                   Comments
                 </th>
               </tr>
@@ -957,7 +983,7 @@ export default function ChronologyTable() {
                   {/* Event Description Column - Editable with Floating Editor */}
                   <td 
                     className="py-4 px-4 align-top relative" 
-                    style={{ fontSize: '14px', wordWrap: 'break-word', overflowWrap: 'break-word' }}
+                    style={{ fontSize: '14px', wordWrap: 'break-word', overflowWrap: 'break-word', width: '35%', minWidth: '300px' }}
                     onMouseEnter={() => setHoveredDescriptionId(fact.id)}
                     onMouseLeave={() => setHoveredDescriptionId(null)}
                   >
@@ -990,7 +1016,7 @@ export default function ChronologyTable() {
                   </td>
 
                   {/* Source Column */}
-                  <td className="py-4 px-4 align-top" style={{ fontSize: '14px' }}>
+                  <td className="py-4 px-4 align-top" style={{ fontSize: '14px', width: '12%', minWidth: '110px' }}>
                     <div className="text-sm">
                       <a 
                         href={fact.documentUrl || '#'} 
@@ -1010,7 +1036,7 @@ export default function ChronologyTable() {
                   </td>
 
                   {/* Actors Column - Split into individual tags */}
-                  <td className="py-4 px-4 align-top" style={{ fontSize: '14px', whiteSpace: 'normal', wordWrap: 'break-word' }}>
+                  <td className="py-4 px-4 align-top" style={{ fontSize: '14px', whiteSpace: 'normal', wordWrap: 'break-word', width: '15%', minWidth: '140px' }}>
                     <div className="flex flex-wrap gap-1">
                       {fact.actor && fact.actor.split(/[,;]/).map((person, idx) => {
                         const trimmed = person.trim();
@@ -1052,7 +1078,7 @@ export default function ChronologyTable() {
                   </td>
 
                   {/* Issues Column - Multi-tag with chips */}
-                  <td className="py-4 px-4 align-top" style={{ fontSize: '14px' }}>
+                  <td className="py-4 px-4 align-top" style={{ fontSize: '14px', width: '10%', minWidth: '130px' }}>
                     <div className="flex flex-col gap-2">
                       {/* Existing issue chips */}
                       <div className="flex flex-wrap gap-1">
@@ -1061,6 +1087,7 @@ export default function ChronologyTable() {
                             key={idx}
                             variant="secondary"
                             className="text-xs cursor-pointer hover:bg-[#E07A5F] hover:text-white transition-colors flex items-center gap-1"
+                            style={{ whiteSpace: 'normal', display: 'inline-block', wordBreak: 'break-word' }}
                           >
                             {issue}
                             <button

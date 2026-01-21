@@ -781,3 +781,42 @@
 - [x] All inputs have bg-transparent
 - [x] Ensure all inputs are aligned with text
 - [x] All inputs have border: none, outline: none, boxShadow: none
+
+## Filter Clear Buttons, Min-Width Guardrails, & Tag Overflow Fix
+
+- [x] Verify global "Clear all filters" button resets all filters
+- [x] Global clear button already exists and resets all filter states
+- [x] Add "Clear Filter" button to Actors filter dropdown
+- [x] Added conditional button that appears when selectedPersons.length > 0
+- [x] Add "Clear Filter" button to Issues filter dropdown
+- [x] Added conditional button that appears when selectedIssues.length > 0
+- [x] Add "Clear Filter" button to Source filter dropdown
+- [x] Added conditional button that appears when selectedSources.length > 0
+- [x] Position clear button at bottom of each dropdown
+- [x] All clear buttons positioned with mt-3 below scrollable list
+- [x] Clear button removes only that column's filter, leaves others active
+- [x] Each button calls setSelectedXXX([]) to clear only that filter
+- [x] Apply min-width to Date column: width: 8%, min-width: 90px
+- [x] Applied to both th and td Date cells
+- [x] Apply min-width to Description column: width: 35%, min-width: 300px
+- [x] Applied to both th and td Description cells
+- [x] Apply min-width to Source column: width: 12%, min-width: 110px
+- [x] Applied to both th and td Source cells
+- [x] Apply min-width to Actors column: width: 15%, min-width: 140px
+- [x] Applied to both th and td Actors cells
+- [x] Apply min-width to Issues column: width: 10%, min-width: 130px
+- [x] Applied to both th and td Issues cells
+- [x] Apply min-width to Comments column: width: 20%, min-width: 180px
+- [x] Applied to th Comments cell (td already has width/minWidth)
+- [x] Apply white-space: normal to Issue tags
+- [x] Added to Badge style prop
+- [x] Apply display: inline-block to Issue tags
+- [x] Added to Badge style prop
+- [x] Apply word-break: break-word to Issue tags for long names
+- [x] Added to Badge style prop to wrap long issue names like "Toronto Stock Exchange"
+- [x] Ensure Add issue input container has display: flex, flex-wrap: wrap
+- [x] Container already has flex and flex-wrap classes
+- [x] Set Add issue input to width: 100%, min-width: 80px
+- [x] Input already has width: 100%, minWidth: 80px, flexGrow: 1
+- [x] Verify input shrinks or wraps without overflowing cell
+- [x] Input configured to fill row when empty, shrink/wrap when tags present
