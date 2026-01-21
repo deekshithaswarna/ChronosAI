@@ -107,9 +107,7 @@ export function FileUpload({ onUploadComplete }: { onUploadComplete?: () => void
         <input {...getInputProps()} />
         <div className="flex flex-col items-center gap-4">
           <Button 
-            type="button" 
-            variant="default" 
-            className="bg-foreground text-background hover:bg-foreground/90"
+            type="button"
           >
             <Upload className="h-4 w-4 mr-2" />
             Upload Documents

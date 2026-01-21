@@ -20,10 +20,14 @@ export default function ChronologyTable() {
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   
-  // Local state for editable fields (persists across sorting)
+  // State for edited issues and comments
   const [editedIssues, setEditedIssues] = useState<Record<number, string[]>>({});
   const [editedComments, setEditedComments] = useState<Record<number, string>>({});
   const [newIssueInputs, setNewIssueInputs] = useState<Record<number, string>>({});
+  
+  // State for inline person editing
+  const [editingPerson, setEditingPerson] = useState<string | null>(null);
+  const [editingPersonValue, setEditingPersonValue] = useState<string>('');
 
   // Filter state
   const [selectedPersons, setSelectedPersons] = useState<string[]>([]);
@@ -203,20 +207,34 @@ export default function ChronologyTable() {
 
   // Rename person across all facts (merge duplicates)
   const renamePersonMutation = trpc.facts.renamePerson.useMutation();
-  const handleRenamePerson = async (oldName: string) => {
-    const newName = prompt(`Rename "${oldName}" to:`, oldName);
-    if (!newName || newName === oldName) return;
+  
+  const startEditingPerson = (personName: string) => {
+    setEditingPerson(personName);
+    setEditingPersonValue(personName);
+  };
+  
+  const savePersonRename = async () => {
+    if (!editingPerson || !editingPersonValue || editingPersonValue === editingPerson) {
+      setEditingPerson(null);
+      return;
+    }
     
     try {
       await renamePersonMutation.mutateAsync({
-        oldName,
-        newName: newName.trim(),
+        oldName: editingPerson,
+        newName: editingPersonValue.trim(),
       });
       utils.facts.list.invalidate();
-      alert(`Successfully renamed "${oldName}" to "${newName}" across all events.`);
+      setEditingPerson(null);
     } catch (error) {
-      alert(`Failed to rename person: ${error}`);
+      console.error('Failed to rename person:', error);
+      setEditingPerson(null);
     }
+  };
+  
+  const cancelPersonEdit = () => {
+    setEditingPerson(null);
+    setEditingPersonValue('');
   };
 
   // Save Comments field on blur
@@ -452,11 +470,11 @@ export default function ChronologyTable() {
             )}
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" className="gap-2" onClick={exportToPDF}>
+            <Button className="gap-2" onClick={exportToPDF}>
               <Download className="h-4 w-4" />
               Export PDF
             </Button>
-            <Button variant="outline" className="gap-2" onClick={exportToWord}>
+            <Button className="gap-2" onClick={exportToWord}>
               <Download className="h-4 w-4" />
               Export Word
             </Button>
@@ -586,21 +604,21 @@ export default function ChronologyTable() {
                   }`}
                 >
                   {/* Date Column */}
-                  <td className="p-4 align-top">
+                  <td className="p-4 align-top" style={{ fontSize: '14px' }}>
                     <span className="font-medium text-foreground">
                       {formatDate(fact.eventDate)}
                     </span>
                   </td>
 
                   {/* Event Description Column */}
-                  <td className="p-4 align-top">
+                  <td className="p-4 align-top" style={{ fontSize: '14px' }}>
                     <p className="text-foreground leading-relaxed">
                       {fact.summary}
                     </p>
                   </td>
 
                   {/* Source Column */}
-                  <td className="p-4 align-top">
+                  <td className="p-4 align-top" style={{ fontSize: '14px' }}>
                     <div className="text-sm">
                       <a 
                         href={fact.documentUrl || '#'} 
@@ -612,25 +630,46 @@ export default function ChronologyTable() {
                         {fact.pageNumber && `, p.${fact.pageNumber}`}
                       </a>
                       {fact.citation && (
-                        <div className="text-muted-foreground mt-2 text-xs">
-                          Other potential sources referenced in uploaded documents: {fact.citation}
+                        <div className="text-muted-foreground mt-2" style={{ fontSize: '14px' }}>
+                          <span className="font-bold">Other potential sources referenced in uploaded documents:</span> {fact.citation}
                         </div>
                       )}
                     </div>
                   </td>
 
                   {/* Persons Column - Split into individual tags */}
-                  <td className="p-4 align-top">
+                  <td className="p-4 align-top" style={{ fontSize: '14px' }}>
                     <div className="flex flex-wrap gap-1">
                       {fact.actor && fact.actor.split(/[,;]/).map((person, idx) => {
                         const trimmed = person.trim();
                         if (!trimmed) return null;
+                        
+                        // Show input field if this person is being edited
+                        if (editingPerson === trimmed) {
+                          return (
+                            <input
+                              key={idx}
+                              type="text"
+                              value={editingPersonValue}
+                              onChange={(e) => setEditingPersonValue(e.target.value)}
+                              onBlur={savePersonRename}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') savePersonRename();
+                                if (e.key === 'Escape') cancelPersonEdit();
+                              }}
+                              autoFocus
+                              className="text-xs px-2 py-1 border border-foreground rounded-md focus:outline-none focus:ring-1 focus:ring-[#E07A5F]"
+                              style={{ width: `${Math.max(editingPersonValue.length * 8 + 20, 80)}px` }}
+                            />
+                          );
+                        }
+                        
                         return (
                           <Badge 
                             key={idx} 
                             variant="secondary" 
                             className="text-xs cursor-pointer hover:bg-[#E07A5F] hover:text-white transition-colors flex items-center gap-1"
-                            onClick={() => handleRenamePerson(trimmed)}
+                            onClick={() => startEditingPerson(trimmed)}
                           >
                             {trimmed}
                             <Pencil className="h-3 w-3" />
@@ -641,7 +680,7 @@ export default function ChronologyTable() {
                   </td>
 
                   {/* Issues Column - Multi-tag with chips */}
-                  <td className="p-4 align-top">
+                  <td className="p-4 align-top" style={{ fontSize: '14px' }}>
                     <div className="max-h-[100px] overflow-y-auto space-y-2">
                       {/* Existing issue chips */}
                       <div className="flex flex-wrap gap-1">
@@ -686,7 +725,7 @@ export default function ChronologyTable() {
                   </td>
 
                   {/* Comments Column - Editable with scrollbar */}
-                  <td className="p-4 align-top">
+                  <td className="p-4 align-top" style={{ fontSize: '14px' }}>
                     <div className="max-h-[100px] overflow-y-auto">
                       <Textarea
                         value={getCommentValue(fact)}

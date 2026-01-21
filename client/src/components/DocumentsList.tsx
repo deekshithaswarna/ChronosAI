@@ -1,14 +1,18 @@
-import { FileText, Loader2, CheckCircle2, XCircle, Trash2 } from 'lucide-react';
+import { FileText, Loader2, CheckCircle2, XCircle, Trash2, Pencil } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
+import { useState } from 'react';
 
 export function DocumentsList() {
   const utils = trpc.useUtils();
   const { data: documents, isLoading } = trpc.documents.list.useQuery();
+  const [editingDocId, setEditingDocId] = useState<number | null>(null);
+  const [editingTitle, setEditingTitle] = useState<string>('');
+  const updateTitleMutation = trpc.documents.updateTitle.useMutation();
   const deleteMutation = trpc.documents.delete.useMutation({
     onSuccess: () => {
       utils.documents.list.invalidate();
@@ -52,14 +56,54 @@ export function DocumentsList() {
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
-                  <a 
-                    href={doc.s3Url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="font-semibold text-sm hover:text-[#E07A5F] hover:underline transition-colors"
-                  >
-                    {doc.documentTitle || doc.originalFilename}
-                  </a>
+                  {editingDocId === doc.id ? (
+                    <input
+                      type="text"
+                      value={editingTitle}
+                      onChange={(e) => setEditingTitle(e.target.value)}
+                      onBlur={async () => {
+                        if (editingTitle && editingTitle !== (doc.documentTitle || doc.originalFilename)) {
+                          await updateTitleMutation.mutateAsync({
+                            id: doc.id,
+                            title: editingTitle
+                          });
+                          utils.documents.list.invalidate();
+                          utils.facts.list.invalidate();
+                        }
+                        setEditingDocId(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.currentTarget.blur();
+                        }
+                        if (e.key === 'Escape') {
+                          setEditingDocId(null);
+                        }
+                      }}
+                      autoFocus
+                      className="font-semibold text-sm px-2 py-1 border border-foreground rounded-md focus:outline-none focus:ring-1 focus:ring-[#E07A5F] w-full"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <a 
+                        href={doc.s3Url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="font-semibold text-sm hover:text-[#E07A5F] hover:underline transition-colors"
+                      >
+                        {doc.documentTitle || doc.originalFilename}
+                      </a>
+                      <button
+                        onClick={() => {
+                          setEditingDocId(doc.id);
+                          setEditingTitle(doc.documentTitle || doc.originalFilename);
+                        }}
+                        className="text-muted-foreground hover:text-[#E07A5F] transition-colors"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                    </div>
+                  )}
                   <p className="text-xs text-muted-foreground mt-1">
                     Uploaded {formatDistanceToNow(new Date(doc.createdAt), { addSuffix: true })}
                   </p>

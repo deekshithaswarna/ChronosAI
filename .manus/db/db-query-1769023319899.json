@@ -1,0 +1,16 @@
+{
+  "query": "SELECT id, filename, documentTitle, status FROM documents ORDER BY id DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3awovWyecyN2Fyr.root --database kVB3RjsaxJBZT5cwSYSGJp --execute SELECT id, filename, documentTitle, status FROM documents ORDER BY id DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "120002",
+      "filename": "italaw4460.pdf",
+      "documentTitle": "NULL",
+      "status": "completed"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tfilename\tdocumentTitle\tstatus\n120002\titalaw4460.pdf\tNULL\tcompleted\n",
+  "stderr": "",
+  "execution_time_ms": 134
+}

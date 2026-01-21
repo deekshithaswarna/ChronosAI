@@ -155,6 +155,12 @@
   input[type="radio"]:not(:disabled) {
     @apply cursor-pointer;
   }
+  
+  /* Hyperlink hover color - Terracotta */
+  a[href]:hover {
+    color: #E07A5F;
+    transition: color 0.2s ease;
+  }
 }
 
 @layer components {

@@ -36,6 +36,13 @@
       "when": 1769020625007,
       "tag": "0004_hesitant_sleeper",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1769024100528,
+      "tag": "0005_small_sumo",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, datetime, boolean, json } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, longtext, timestamp, varchar, datetime, boolean, json } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -32,7 +32,7 @@ export const documents = mysqlTable("documents", {
   s3Url: text("s3Url").notNull(),
   status: mysqlEnum("status", ["pending", "processing", "completed", "failed"]).default("pending").notNull(),
   errorMessage: text("errorMessage"),
-  extractedText: text("extractedText"), // Raw extracted text
+  extractedText: longtext("extractedText"), // Raw extracted text (supports up to 4GB)
   documentTitle: text("documentTitle"), // AI-generated smart title
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

@@ -1,0 +1,1 @@
+ALTER TABLE `documents` MODIFY COLUMN `extractedText` longtext;

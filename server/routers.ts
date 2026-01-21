@@ -46,11 +46,18 @@ export const appRouter = router({
         let smartTitle = input.filename;
         if (input.mimeType === 'application/pdf') {
           try {
+            console.log('[Smart Title] Starting extraction for:', input.filename);
             const { extractFirstPages } = await import('./documentExtractor');
+            console.log('[Smart Title] Extracting first 2 pages...');
             const firstPagesText = await extractFirstPages(fileBuffer, 2);
+            console.log('[Smart Title] Extracted text length:', firstPagesText.length);
+            console.log('[Smart Title] First 200 chars:', firstPagesText.substring(0, 200));
+            console.log('[Smart Title] Calling extractSmartTitle...');
             smartTitle = await extractSmartTitle(firstPagesText);
+            console.log('[Smart Title] Extracted title:', smartTitle);
           } catch (error) {
-            console.error('Failed to extract smart title:', error);
+            console.error('[Smart Title] ERROR:', error);
+            console.error('[Smart Title] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
             // Fall back to filename if extraction fails
           }
         }
@@ -103,6 +110,17 @@ export const appRouter = router({
       .input(z.object({ id: z.number() }))
       .mutation(async ({ ctx, input }) => {
         await db.deleteDocument(input.id, ctx.user.id);
+        return { success: true };
+      }),
+    
+    // Update document title
+    updateTitle: protectedProcedure
+      .input(z.object({ 
+        id: z.number(),
+        title: z.string()
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.updateDocumentTitle(input.id, ctx.user.id, input.title);
         return { success: true };
       }),
   }),
@@ -178,8 +196,11 @@ export type AppRouter = typeof appRouter;
 // Extract Smart Title from first 2 pages using LLM
 async function extractSmartTitle(firstPagesText: string): Promise<string> {
   try {
+    console.log('[extractSmartTitle] Function called with text length:', firstPagesText.length);
     const { invokeLLM } = await import('./_core/llm');
+    console.log('[extractSmartTitle] invokeLLM imported successfully');
     
+    console.log('[extractSmartTitle] Calling LLM...');
     const response = await invokeLLM({
       messages: [
         {
@@ -211,15 +232,22 @@ async function extractSmartTitle(firstPagesText: string): Promise<string> {
       }
     });
     
+    console.log('[extractSmartTitle] LLM response received:', JSON.stringify(response, null, 2));
     const content = response.choices[0]?.message?.content;
+    console.log('[extractSmartTitle] Content:', content);
     if (content && typeof content === 'string') {
       const parsed = JSON.parse(content);
-      return parsed.title || 'Untitled Document';
+      console.log('[extractSmartTitle] Parsed:', parsed);
+      const title = parsed.title || 'Untitled Document';
+      console.log('[extractSmartTitle] Final title:', title);
+      return title;
     }
     
+    console.log('[extractSmartTitle] No valid content, returning Untitled Document');
     return 'Untitled Document';
   } catch (error) {
-    console.error('Failed to extract smart title:', error);
+    console.error('[extractSmartTitle] ERROR:', error);
+    console.error('[extractSmartTitle] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     return 'Untitled Document';
   }
 }

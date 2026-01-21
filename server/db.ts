@@ -140,6 +140,15 @@ export async function updateDocumentWithTitle(id: number, documentTitle: string,
     .where(eq(documents.id, id));
 }
 
+export async function updateDocumentTitle(documentId: number, userId: number, newTitle: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(documents)
+    .set({ documentTitle: newTitle, updatedAt: new Date() })
+    .where(and(eq(documents.id, documentId), eq(documents.userId, userId)));
+}
+
 // Fact queries
 export async function createFact(fact: InsertFact) {
   const db = await getDb();

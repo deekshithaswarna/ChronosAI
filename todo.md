@@ -345,3 +345,77 @@
 - [x] Standardize all sorting and filtering icon sizes in table headers
 - [x] Ensure ArrowUpDown and Filter icons are the same size
 - [x] All icons already set to h-4 w-4 (16px) for consistency
+
+## Smart Title Generation Debug (Critical Bug)
+
+### Root Cause Analysis
+- [x] Add detailed error logging to Smart Title extraction in routers.ts
+- [ ] Test upload flow with new document to capture actual error
+- [x] Identify why extractSmartTitle is failing silently
+- [x] Check if LLM invocation is working correctly
+- [x] Verify extractFirstPages returns valid text
+- [x] **FOUND ROOT CAUSE**: extractedText field (TEXT 65KB) too small for large documents
+- [x] Changed extractedText from text to longtext (supports up to 4GB)
+- [x] Pushed database schema changes successfully
+
+### Fix Implementation
+- [ ] Fix the root cause preventing Smart Title extraction
+- [ ] Ensure Smart Titles are saved to database during upload
+- [ ] Verify Smart Titles display in DocumentsList component
+- [ ] Verify Smart Titles display in ChronologyTable Source column
+- [ ] Add fallback handling for extraction failures
+
+### Testing
+- [ ] Upload a new test document and verify Smart Title is generated
+- [ ] Check database to confirm documentTitle field is populated
+- [ ] Verify Smart Title appears in Recent Uploads list
+- [ ] Verify Smart Title appears in chronology table Source column
+
+## Button & Link Standardization
+
+### Minimalist Outlined Button Style
+- [x] Apply to all buttons throughout the app
+- [x] Normal state: Transparent background, 1px solid black border, black text
+- [x] Hover state: Terracotta (#E07A5F) text and border, no fill
+- [x] Update Upload Documents button
+- [x] Update Export PDF and Export Word buttons
+- [x] Update all other buttons (delete, add, etc.)
+
+### Hyperlink Styling
+- [x] Apply terracotta hover color to all clickable links
+- [x] Update Source column document title links
+- [x] Update Recent Uploads file name links
+- [x] Ensure consistent hover transition
+
+## Table Typography & Formatting
+
+### Font Consistency
+- [x] Ensure ALL table text uses Inter font family
+- [x] Set consistent 14px font size for all table content
+- [x] Apply to Date, Description, Source, Persons, Issues, Comments columns
+- [x] Remove any font size variations
+
+### Source Column Formatting
+- [x] Make "Other potential sources referenced in uploaded documents:" label bold (font-weight: 700)
+- [x] Keep referenced document names in regular weight
+
+## Inline Editing (No Popups)
+
+### Person Tag Inline Editing
+- [x] Remove browser alert/popup on click
+- [x] Convert clicked tag to input field in place
+- [x] Save on Enter key press
+- [x] Save on click away (blur event)
+- [x] Auto-update ALL identical person tags in table (merge functionality)
+- [x] Add visual feedback during editing
+
+### File Name Inline Editing
+- [x] Remove browser alert/popup on click in Recent Uploads
+- [x] Convert clicked file name to input field in place
+- [x] Save on Enter key press
+- [x] Save on click away (blur event)
+- [x] Auto-update display name in Source Column of chronology table
+- [x] Add visual feedback during editing
+- [x] Added pencil icon next to document titles
+- [x] Created updateDocumentTitle tRPC mutation
+- [x] Added updateDocumentTitle function in db.ts
