@@ -284,6 +284,7 @@ async function processDocumentAsync(documentId: number, s3Url: string, mimeType:
         issue: null, // No longer extracted separately
         citation: fact.citation || null,
         confidence: fact.importance * 10, // Convert 1-10 to 10-100
+        pageNumber: fact.pageNumber || null,
       });
     }
     

@@ -419,3 +419,85 @@
 - [x] Added pencil icon next to document titles
 - [x] Created updateDocumentTitle tRPC mutation
 - [x] Added updateDocumentTitle function in db.ts
+
+## Page Number Extraction Enhancement
+
+### Document Extractor Updates
+- [x] Update extractTextFromPDF to return page-by-page text array
+- [x] Create extractTextByPage function that returns { pageNumber, text }[]
+- [x] Ensure each page's text is tracked separately
+- [x] extractTextFromPdf already returns PagedText with pages array
+
+### Fact Extractor Updates
+- [x] Modify factExtractor to accept page-tracked text
+- [x] Update LLM prompt to include page number context
+- [x] Ensure extracted facts include pageNumber field
+- [x] Update JSON schema to require pageNumber for each fact
+- [x] Added [PAGE X] markers to text sent to LLM
+- [x] Updated ExtractedFact interface to include pageNumber
+- [x] Added pageNumber to JSON schema as required field
+
+### Processing Pipeline Updates
+- [x] Update processDocumentAsync to use page-by-page extraction
+- [x] Pass page numbers to createFact database function
+- [x] Verify pageNumber is saved correctly in facts table
+- [x] extractFactsFromText already receives extractedData.pages
+- [x] Added pageNumber: fact.pageNumber || null to createFact call
+
+### Frontend Display
+- [x] Verify ChronologyTable Source column shows "Smart Title, p.X"
+- [x] Ensure page numbers display correctly for all events
+- [ ] Test with new document upload
+- [x] Source column already displays pageNumber when available
+- [x] Format: {documentTitle}{pageNumber ? `, p.${pageNumber}` : ''}
+- [x] Created factExtractor.test.ts with 3 passing tests
+
+## Final UI Polish & Date Filtering
+
+### Column Width Adjustments
+- [x] Reduce Persons column width (currently 12%)
+- [x] Expand Event Description column (widest column)
+- [x] Expand Comments column (second widest)
+- [x] Adjust other columns accordingly
+- [x] Persons: 12% → 10%
+- [x] Issues: 15% → 12%
+- [x] Comments: 15% → 18%
+- [x] Event Description expands to fill remaining space
+
+### Date Column Filtering
+- [x] Add filter icon to Date column header
+- [x] Implement dropdown with three filter options
+- [x] Option 1: By Year - multi-select list of years
+- [x] Option 2: By Month - multi-select list of months
+- [x] Option 3: By Range - "From" and "To" date pickers
+- [x] Update table immediately when filters change
+- [x] Highlight filter icon when active
+- [x] Added dateFilterMode state with 'year', 'month', 'range' options
+- [x] Created uniqueYears extraction with descending sort
+- [x] Implemented tabbed UI with terracotta active state
+- [x] Added date filtering logic to filteredAndSortedFacts
+- [x] Filter icon turns terracotta when active
+
+### Icon & Button Consistency
+- [x] Set all table header icons to exactly 20px (w-5 h-5)
+- [x] Align icons perfectly with header text
+- [x] Verify all buttons use Minimalist Outlined style
+- [x] Ensure Upload, Export PDF, Export Word buttons are consistent
+- [x] Changed all ArrowUpDown icons from h-4 w-4 to h-5 w-5
+- [x] Changed all Filter icons from h-4 w-4 to h-5 w-5
+- [x] Updated Person and Issue filter icons to use terracotta color when active
+
+### Typography Verification
+- [x] Confirm ALL table text uses 14px Inter font
+- [x] Verify "Other potential sources..." label is bold (font-weight: 700)
+- [x] Check Date, Description, Source, Persons, Issues, Comments columns
+- [x] All table cells have style={{ fontSize: '14px' }}
+- [x] "Other potential sources..." label has className="font-bold"
+
+### Inline Editing Verification
+- [x] Confirm Person tags use inline editing (no popups)
+- [x] Verify no window.prompt or browser alerts remain
+- [x] Test click-to-edit, enter-to-save functionality
+- [x] Person tags use inline input field on click
+- [x] Document titles use inline editing in Recent Uploads
+- [x] All popups replaced with inline editing

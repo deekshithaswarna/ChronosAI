@@ -34,10 +34,19 @@ export default function ChronologyTable() {
   const [selectedIssues, setSelectedIssues] = useState<string[]>([]);
   const [showPersonFilter, setShowPersonFilter] = useState(false);
   const [showIssueFilter, setShowIssueFilter] = useState(false);
+  
+  // Date filter state
+  const [showDateFilter, setShowDateFilter] = useState(false);
+  const [dateFilterMode, setDateFilterMode] = useState<'year' | 'month' | 'range'>('year');
+  const [selectedYears, setSelectedYears] = useState<number[]>([]);
+  const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
+  const [dateRangeFrom, setDateRangeFrom] = useState<string>('');
+  const [dateRangeTo, setDateRangeTo] = useState<string>('');
 
   // Refs for click-outside detection
   const personFilterRef = useRef<HTMLDivElement>(null);
   const issueFilterRef = useRef<HTMLDivElement>(null);
+  const dateFilterRef = useRef<HTMLDivElement>(null);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -47,6 +56,9 @@ export default function ChronologyTable() {
       }
       if (issueFilterRef.current && !issueFilterRef.current.contains(event.target as Node)) {
         setShowIssueFilter(false);
+      }
+      if (dateFilterRef.current && !dateFilterRef.current.contains(event.target as Node)) {
+        setShowDateFilter(false);
       }
     };
 
@@ -81,6 +93,18 @@ export default function ChronologyTable() {
     });
     return Array.from(issues).sort();
   }, [facts]);
+  
+  // Get unique years and months from facts
+  const uniqueYears = useMemo(() => {
+    if (!facts) return [];
+    const years = new Set<number>();
+    facts.forEach(fact => {
+      years.add(new Date(fact.eventDate).getFullYear());
+    });
+    return Array.from(years).sort((a, b) => b - a); // Descending order
+  }, [facts]);
+  
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
   // Filter and sort facts
   const filteredAndSortedFacts = useMemo(() => {
@@ -105,6 +129,28 @@ export default function ChronologyTable() {
         return false;
       });
     }
+    
+    // Apply date filters
+    if (dateFilterMode === 'year' && selectedYears.length > 0) {
+      filtered = filtered.filter(f => {
+        const year = new Date(f.eventDate).getFullYear();
+        return selectedYears.includes(year);
+      });
+    }
+    if (dateFilterMode === 'month' && selectedMonths.length > 0) {
+      filtered = filtered.filter(f => {
+        const month = new Date(f.eventDate).getMonth() + 1; // 1-12
+        return selectedMonths.includes(month);
+      });
+    }
+    if (dateFilterMode === 'range' && (dateRangeFrom || dateRangeTo)) {
+      filtered = filtered.filter(f => {
+        const eventDate = new Date(f.eventDate);
+        if (dateRangeFrom && eventDate < new Date(dateRangeFrom)) return false;
+        if (dateRangeTo && eventDate > new Date(dateRangeTo)) return false;
+        return true;
+      });
+    }
 
     // Apply sorting
     return [...filtered].sort((a, b) => {
@@ -120,7 +166,7 @@ export default function ChronologyTable() {
       
       return sortDirection === 'asc' ? comparison : -comparison;
     });
-  }, [facts, sortField, sortDirection, selectedPersons, selectedIssues]);
+  }, [facts, sortField, sortDirection, selectedPersons, selectedIssues, dateFilterMode, selectedYears, selectedMonths, dateRangeFrom, dateRangeTo]);
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
@@ -489,14 +535,131 @@ export default function ChronologyTable() {
             {/* Sticky Header */}
             <thead className="sticky top-0 z-10">
               <tr className="bg-foreground text-background">
-                <th 
-                  className="w-[12%] p-4 text-left font-bold heading cursor-pointer hover:bg-foreground/90 transition-colors"
-                  onClick={() => toggleSort('date')}
-                >
+                <th className="w-[12%] p-4 text-left font-bold heading relative">
                   <div className="flex items-center gap-2">
-                    Date
-                    <ArrowUpDown className="h-4 w-4" />
+                    <span 
+                      className="cursor-pointer hover:opacity-70 transition-opacity"
+                      onClick={() => toggleSort('date')}
+                    >
+                      Date
+                    </span>
+                    <ArrowUpDown 
+                      className="h-5 w-5 cursor-pointer hover:opacity-70 transition-opacity" 
+                      onClick={() => toggleSort('date')}
+                    />
+                    <button
+                      onClick={() => setShowDateFilter(!showDateFilter)}
+                      className="hover:bg-background/10 p-1 rounded transition-colors"
+                    >
+                      <Filter className={`h-5 w-5 ${(selectedYears.length > 0 || selectedMonths.length > 0 || dateRangeFrom || dateRangeTo) ? 'text-[#E07A5F]' : ''}`} />
+                    </button>
                   </div>
+                  
+                  {/* Date Filter Dropdown */}
+                  {showDateFilter && (
+                    <div ref={dateFilterRef} className="absolute top-full left-0 mt-1 bg-background border border-border rounded-md shadow-lg p-4 z-20 min-w-[300px]">
+                      {/* Filter Mode Tabs */}
+                      <div className="flex gap-2 mb-4 border-b border-border">
+                        <button
+                          onClick={() => setDateFilterMode('year')}
+                          className={`px-3 py-2 text-sm transition-colors ${dateFilterMode === 'year' ? 'border-b-2 border-[#E07A5F] text-[#E07A5F] font-bold' : 'text-foreground/70 hover:text-foreground'}`}
+                        >
+                          By Year
+                        </button>
+                        <button
+                          onClick={() => setDateFilterMode('month')}
+                          className={`px-3 py-2 text-sm transition-colors ${dateFilterMode === 'month' ? 'border-b-2 border-[#E07A5F] text-[#E07A5F] font-bold' : 'text-foreground/70 hover:text-foreground'}`}
+                        >
+                          By Month
+                        </button>
+                        <button
+                          onClick={() => setDateFilterMode('range')}
+                          className={`px-3 py-2 text-sm transition-colors ${dateFilterMode === 'range' ? 'border-b-2 border-[#E07A5F] text-[#E07A5F] font-bold' : 'text-foreground/70 hover:text-foreground'}`}
+                        >
+                          By Range
+                        </button>
+                      </div>
+                      
+                      {/* Year Filter */}
+                      {dateFilterMode === 'year' && (
+                        <div className="max-h-[300px] overflow-y-auto">
+                          {uniqueYears.map(year => (
+                            <label key={year} className="flex items-center gap-2 p-2 hover:bg-accent rounded cursor-pointer">
+                              <Checkbox
+                                checked={selectedYears.includes(year)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedYears([...selectedYears, year]);
+                                  } else {
+                                    setSelectedYears(selectedYears.filter(y => y !== year));
+                                  }
+                                }}
+                              />
+                              <span className="text-sm">{year}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {/* Month Filter */}
+                      {dateFilterMode === 'month' && (
+                        <div className="max-h-[300px] overflow-y-auto">
+                          {monthNames.map((month, index) => (
+                            <label key={index} className="flex items-center gap-2 p-2 hover:bg-accent rounded cursor-pointer">
+                              <Checkbox
+                                checked={selectedMonths.includes(index + 1)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedMonths([...selectedMonths, index + 1]);
+                                  } else {
+                                    setSelectedMonths(selectedMonths.filter(m => m !== index + 1));
+                                  }
+                                }}
+                              />
+                              <span className="text-sm">{month}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {/* Range Filter */}
+                      {dateFilterMode === 'range' && (
+                        <div className="space-y-4">
+                          <div>
+                            <label className="text-sm font-medium mb-1 block">From:</label>
+                            <input
+                              type="date"
+                              value={dateRangeFrom}
+                              onChange={(e) => setDateRangeFrom(e.target.value)}
+                              className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium mb-1 block">To:</label>
+                            <input
+                              type="date"
+                              value={dateRangeTo}
+                              onChange={(e) => setDateRangeTo(e.target.value)}
+                              className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm"
+                            />
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Clear Filters Button */}
+                      <button
+                        onClick={() => {
+                          setSelectedYears([]);
+                          setSelectedMonths([]);
+                          setDateRangeFrom('');
+                          setDateRangeTo('');
+                        }}
+                        className="mt-4 w-full px-3 py-2 text-sm bg-accent hover:bg-accent/80 rounded transition-colors"
+                      >
+                        Clear Date Filters
+                      </button>
+                    </div>
+                  )}
                 </th>
                 <th 
                   className="w-[28%] p-4 text-left font-bold heading cursor-pointer hover:bg-foreground/90 transition-colors"
@@ -504,7 +667,7 @@ export default function ChronologyTable() {
                 >
                   <div className="flex items-center gap-2">
                     Event Description
-                    <ArrowUpDown className="h-4 w-4" />
+                    <ArrowUpDown className="h-5 w-5" />
                   </div>
                 </th>
                 <th 
@@ -513,17 +676,17 @@ export default function ChronologyTable() {
                 >
                   <div className="flex items-center gap-2">
                     Source
-                    <ArrowUpDown className="h-4 w-4" />
+                    <ArrowUpDown className="h-5 w-5" />
                   </div>
                 </th>
-                <th className="w-[12%] p-4 text-left font-bold heading relative">
+                <th className="w-[10%] p-4 text-left font-bold heading relative">
                   <div className="flex items-center gap-2">
                     Persons
                     <button
                       onClick={() => setShowPersonFilter(!showPersonFilter)}
                       className="hover:bg-background/10 p-1 rounded transition-colors"
                     >
-                      <Filter className={`h-4 w-4 ${selectedPersons.length > 0 ? 'text-blue-300' : ''}`} />
+                      <Filter className={`h-5 w-5 ${selectedPersons.length > 0 ? 'text-[#E07A5F]' : ''}`} />
                     </button>
                   </div>
                   
@@ -552,14 +715,14 @@ export default function ChronologyTable() {
                     </div>
                   )}
                 </th>
-                <th className="w-[15%] p-4 text-left font-bold heading relative">
+                <th className="w-[12%] p-4 text-left font-bold heading relative">
                   <div className="flex items-center gap-2">
                     Issues
                     <button
                       onClick={() => setShowIssueFilter(!showIssueFilter)}
                       className="hover:bg-background/10 p-1 rounded transition-colors"
                     >
-                      <Filter className={`h-4 w-4 ${selectedIssues.length > 0 ? 'text-blue-300' : ''}`} />
+                      <Filter className={`h-5 w-5 ${selectedIssues.length > 0 ? 'text-[#E07A5F]' : ''}`} />
                     </button>
                   </div>
                   
@@ -588,7 +751,7 @@ export default function ChronologyTable() {
                     </div>
                   )}
                 </th>
-                <th className="w-[15%] p-4 text-left font-bold heading">
+                <th className="w-[18%] p-4 text-left font-bold heading">
                   Comments
                 </th>
               </tr>

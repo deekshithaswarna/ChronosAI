@@ -13,6 +13,7 @@ export interface ExtractedFact {
   importance: number; // 1-10 scale
   citation?: string;
   originalText: string;
+  pageNumber?: number;
 }
 
 export interface ExtractionResult {
@@ -66,6 +67,7 @@ FACT EXTRACTION - FOCUS ON:
 - Actor: Who performed the action. IMPORTANT: If multiple people/entities are involved, list them as comma-separated values (e.g., "John Doe, Jane Smith, ABC Corp"). Each name should be a separate entity.
 - Event: What happened (be specific and concise)
 - Importance: Rate 1-10 (10 = critical legal event like filing, verdict; 1 = minor administrative)
+- Page Number: The page number where this event was found (look for [PAGE X] markers in the text)
 
 RELATIVE DATE HANDLING:
 - If text says "the following day" or "next day", add 1 day to the previous date
@@ -75,12 +77,20 @@ RELATIVE DATE HANDLING:
 
 Return ONLY valid JSON with no additional text.`;
 
+  // Build text with page markers if pages are available
+  let textWithPageMarkers = text;
+  if (pages && pages.length > 0) {
+    textWithPageMarkers = pages
+      .map(p => `[PAGE ${p.pageNumber}]\n${p.text}`)
+      .join('\n\n');
+  }
+  
   const userPrompt = `Extract all legal events from this document and generate a descriptive document title. Pay special attention to dates and calculate relative dates based on context.
 
 ${dateAnchors.length > 0 ? `\nDate anchors found:\n${dateAnchors.map(a => `- ${a.date}: ${a.context.substring(0, 150)}...`).join('\n')}\n` : ''}
 
 Document text (first 15000 chars):
-${text.substring(0, 15000)}`;
+${textWithPageMarkers.substring(0, 15000)}`;
 
   try {
     const response = await invokeLLM({
@@ -109,8 +119,9 @@ ${text.substring(0, 15000)}`;
                     importance: { type: 'integer', description: 'Importance score 1-10', minimum: 1, maximum: 10 },
                     citation: { type: 'string', description: 'Legal citation if present, empty string if not available' },
                     originalText: { type: 'string', description: 'Original text excerpt' },
+                    pageNumber: { type: 'integer', description: 'Page number where this event was found', minimum: 1 },
                   },
-                  required: ['date', 'actor', 'event', 'importance', 'originalText'],
+                  required: ['date', 'actor', 'event', 'importance', 'originalText', 'pageNumber'],
                   additionalProperties: false,
                 },
               },
@@ -148,6 +159,7 @@ ${text.substring(0, 15000)}`;
       importance: Math.min(10, Math.max(1, event.importance)), // Clamp to 1-10
       citation: event.citation || undefined,
       originalText: event.originalText,
+      pageNumber: event.pageNumber || undefined,
     }));
 
     return {
