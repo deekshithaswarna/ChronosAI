@@ -654,9 +654,9 @@ export default function ChronologyTable() {
       </div>
 
       {/* Strict HTML Table */}
-      <div className="bg-card rounded-lg shadow-md border border-foreground/10 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse legal-table" style={{ tableLayout: 'fixed' }}>
+      <div className="bg-card rounded-lg shadow-md border border-foreground/10" style={{ overflow: 'visible' }}>
+        <div style={{ overflow: 'visible' }}>
+          <table className="w-full border-collapse legal-table" style={{ tableLayout: 'fixed', overflow: 'visible' }}>
             {/* Sticky Header */}
             <thead className="sticky top-0 z-10">
               <tr className="bg-foreground text-background">
@@ -913,23 +913,22 @@ export default function ChronologyTable() {
                   onMouseEnter={() => setHoveredRowId(fact.id)}
                   onMouseLeave={() => setHoveredRowId(null)}
                 >
-                  {/* Trash Icon - Floats outside table on left */}
-                  <button
-                    onClick={() => handleDeleteFact(fact.id)}
-                    className="absolute text-[#9CA3AF] hover:text-[#EF4444] transition-all p-1 rounded"
-                    style={{ 
-                      left: '-40px', 
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      opacity: hoveredRowId === fact.id ? 1 : 0,
-                      pointerEvents: hoveredRowId === fact.id ? 'auto' : 'none'
-                    }}
-                    title="Delete this event"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                  {/* Date Column - Editable with Floating Editor */}
+                  {/* Date Column - Editable with Floating Editor & Trash Icon */}
                   <td className="py-4 px-4 align-top relative" style={{ fontSize: '14px' }}>
+                    {/* Trash Icon - Floats outside table to the left */}
+                    <button
+                      onClick={() => handleDeleteFact(fact.id)}
+                      className="absolute text-[#9CA3AF] hover:text-[#EF4444] transition-all p-1 rounded"
+                      style={{ 
+                        left: '-32px', 
+                        top: '16px',
+                        opacity: hoveredRowId === fact.id ? 1 : 0,
+                        pointerEvents: hoveredRowId === fact.id ? 'auto' : 'none'
+                      }}
+                      title="Delete this event"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                     <span 
                       className="font-medium text-foreground cursor-pointer hover:bg-foreground/5 px-1 py-0.5 rounded transition-colors"
                       onClick={() => startEditingDate(fact.id)}

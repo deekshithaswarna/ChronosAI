@@ -742,3 +742,42 @@
 - [x] Applied variant="secondary" matching Actor tags
 - [x] Ensure Issue tags look identical to Actor tags
 - [x] Both use same Badge component with identical styling
+
+## Delete Button Overflow Fix & Column Order Restoration
+
+- [x] Apply overflow: visible !important to main table container
+- [x] Applied overflow: 'visible' to bg-card container div
+- [x] Apply overflow: visible !important to table element itself
+- [x] Applied overflow: 'visible' to inner div and table element
+- [x] Remove trash icon from being child of tr
+- [x] Moved trash icon from tr to Date cell
+- [x] Set position: relative on first td (Date column)
+- [x] Date cell already has position: relative
+- [x] Place trash icon as child of Date cell
+- [x] Trash icon now first child of Date td
+- [x] Position trash icon at left: -32px, top: 16px
+- [x] Applied exact positioning: left: '-32px', top: '16px'
+- [x] Set opacity: 0 by default, opacity: 1 on tr:hover
+- [x] Opacity controlled by hoveredRowId state
+- [x] Verify column order is correct: Date, Description, Source, Actors, Issues, Comments
+- [x] Column order verified correct
+- [x] Column 1 renders event.date (8%)
+- [x] Date column renders formatDate(fact.eventDate)
+- [x] Column 2 renders event.description (35%)
+- [x] Description column renders getDescriptionValue(fact)
+- [x] Column 3 renders event.sourceTitle (12%)
+- [x] Source column renders fact.documentTitle/documentName
+- [x] Column 4 renders event.persons tags (15%)
+- [x] Actors column renders getPersonValue(fact) as Badge tags
+- [x] Column 5 renders event.issues tags (10%)
+- [x] Issues column renders getIssueValue(fact) as Badge tags
+- [x] Column 6 renders event.userComments (20%)
+- [x] Comments column renders getCommentValue(fact) in Textarea
+- [x] Apply vertical-align: top !important to all cells
+- [x] All cells have align-top class
+- [x] Set padding-top: 16px on all cells
+- [x] All cells have py-4 (16px top/bottom padding)
+- [x] Ensure all inputs are transparent (no white background)
+- [x] All inputs have bg-transparent
+- [x] Ensure all inputs are aligned with text
+- [x] All inputs have border: none, outline: none, boxShadow: none
