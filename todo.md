@@ -535,3 +535,15 @@
 - [x] Updated "No persons found" to "No actors found"
 - [x] Updated PDF export column header
 - [x] Updated column comment in code
+
+## Table Column Width Optimization
+
+- [x] Applied table-layout: fixed to enforce strict column widths
+- [x] Updated Date column to 8% (from 12%)
+- [x] Updated Event Description column to 37% (from 28%) - significantly wider
+- [x] Kept Source column at 12%
+- [x] Updated Actors column to 13% (from 10%)
+- [x] Updated Issues column to 13% (from 12%)
+- [x] Updated Comments column to 17% (from 18%)
+- [x] Added word-wrap: break-word and overflowWrap: break-word to Event Description column
+- [x] Added word-wrap: break-word and overflowWrap: break-word to Comments column

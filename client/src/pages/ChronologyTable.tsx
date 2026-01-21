@@ -551,11 +551,11 @@ export default function ChronologyTable() {
       {/* Strict HTML Table */}
       <div className="bg-card rounded-lg shadow-md border border-foreground/10 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse legal-table">
+          <table className="w-full border-collapse legal-table" style={{ tableLayout: 'fixed' }}>
             {/* Sticky Header */}
             <thead className="sticky top-0 z-10">
               <tr className="bg-foreground text-background">
-                <th className="w-[12%] p-4 text-left font-bold heading relative">
+                <th className="p-4 text-left font-bold heading relative" style={{ width: '8%' }}>
                   <div className="flex items-center gap-2">
                     <span 
                       className="cursor-pointer hover:opacity-70 transition-opacity"
@@ -682,11 +682,12 @@ export default function ChronologyTable() {
                   )}
                 </th>
                 <th 
-                  className="w-[28%] p-4 text-left font-bold heading"
+                  className="p-4 text-left font-bold heading"
+                  style={{ width: '37%' }}
                 >
                   Event Description
                 </th>
-                <th className="w-[12%] p-4 text-left font-bold heading relative">
+                <th className="p-4 text-left font-bold heading relative" style={{ width: '12%' }}>
                   <div className="flex items-center gap-2">
                     Source
                     <button
@@ -718,7 +719,7 @@ export default function ChronologyTable() {
                     </div>
                   )}
                 </th>
-                <th className="w-[10%] p-4 text-left font-bold heading relative">
+                <th className="p-4 text-left font-bold heading relative" style={{ width: '13%' }}>
                   <div className="flex items-center gap-2">
                     Actors
                     <button
@@ -754,7 +755,7 @@ export default function ChronologyTable() {
                     </div>
                   )}
                 </th>
-                <th className="w-[12%] p-4 text-left font-bold heading relative">
+                <th className="p-4 text-left font-bold heading relative" style={{ width: '13%' }}>
                   <div className="flex items-center gap-2">
                     Issues
                     <button
@@ -790,7 +791,7 @@ export default function ChronologyTable() {
                     </div>
                   )}
                 </th>
-                <th className="w-[18%] p-4 text-left font-bold heading">
+                <th className="p-4 text-left font-bold heading" style={{ width: '17%' }}>
                   Comments
                 </th>
               </tr>
@@ -813,7 +814,7 @@ export default function ChronologyTable() {
                   </td>
 
                   {/* Event Description Column */}
-                  <td className="p-4 align-top" style={{ fontSize: '14px' }}>
+                  <td className="p-4 align-top" style={{ fontSize: '14px', wordWrap: 'break-word', overflowWrap: 'break-word' }}>
                     <p className="text-foreground leading-relaxed">
                       {fact.summary}
                     </p>
@@ -927,7 +928,7 @@ export default function ChronologyTable() {
                   </td>
 
                   {/* Comments Column - Editable with scrollbar */}
-                  <td className="p-4 align-top" style={{ fontSize: '14px' }}>
+                  <td className="p-4 align-top" style={{ fontSize: '14px', wordWrap: 'break-word', overflowWrap: 'break-word' }}>
                     <div className="max-h-[100px] overflow-y-auto">
                       <Textarea
                         value={getCommentValue(fact)}
