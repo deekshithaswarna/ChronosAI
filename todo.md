@@ -916,3 +916,8 @@
 ## Fix Actors Filter Black Hover Effect
 - [x] Remove black hover effect from Actors filter items
 - [x] Apply beige hover effect matching Source filter (hover:bg-accent)
+
+## Fix Search Chronology Input Regression
+- [x] Verify searchTerm state is updating when typing in search input
+- [x] Reconnect search logic to table filtering function
+- [x] Ensure search works in combination with dropdown filters (Source, Actors, Issues)
