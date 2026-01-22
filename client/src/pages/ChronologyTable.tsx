@@ -818,7 +818,7 @@ export default function ChronologyTable() {
                   
                   {/* Date Filter Dropdown */}
                   {showDateFilter && (
-                    <div ref={dateFilterRef} className="absolute top-full left-0 mt-1 bg-background border border-border rounded-md shadow-lg p-4 z-20 min-w-[300px]">
+                    <div ref={dateFilterRef} className="absolute top-full left-0 mt-1 bg-background border border-border rounded-md shadow-lg p-4 z-40 min-w-[300px]">
                       {/* Filter Mode Tabs */}
                       <div className="flex gap-2 mb-4 border-b border-border">
                         <button
@@ -941,7 +941,7 @@ export default function ChronologyTable() {
                   
                   {/* Source Filter Dropdown */}
                   {showSourceFilter && (
-                    <div ref={sourceFilterRef} className="absolute top-full left-0 mt-1 bg-background border border-border rounded-md shadow-lg p-4 z-20 min-w-[250px]">
+                    <div ref={sourceFilterRef} className="absolute top-full left-0 mt-1 bg-background border border-border rounded-md shadow-lg p-4 z-40 min-w-[250px]">
                       <div className="max-h-[300px] overflow-y-auto">
                         {uniqueSources.map(source => (
                           <label key={source} className="flex items-center gap-2 p-2 hover:bg-accent rounded cursor-pointer">
@@ -983,7 +983,7 @@ export default function ChronologyTable() {
                   
                   {/* Person Filter Dropdown */}
                   {showPersonFilter && (
-                    <div ref={personFilterRef} className="absolute top-full left-0 mt-1 bg-background border border-border rounded-md shadow-lg p-4 z-20 min-w-[250px]">
+                    <div ref={personFilterRef} className="absolute top-full left-0 mt-1 bg-background border border-border rounded-md shadow-lg p-4 z-40 min-w-[250px]">
                       <div className="max-h-[300px] overflow-y-auto">
                         {uniquePersons.length === 0 ? (
                           <div className="text-muted-foreground text-xs">No actors found</div>
@@ -1025,7 +1025,7 @@ export default function ChronologyTable() {
                   {showIssueFilter && (
                     <div 
                       ref={issueFilterRef}
-                      className="absolute top-full left-0 mt-2 bg-card border border-foreground/20 rounded-lg shadow-lg p-4 min-w-[200px] z-20 text-foreground font-normal text-sm"
+                      className="absolute top-full left-0 mt-2 bg-card border border-foreground/20 rounded-lg shadow-lg p-4 min-w-[200px] z-40 text-foreground font-normal text-sm"
                     >
                       <div className="font-semibold mb-2 text-xs uppercase tracking-wide">Filter by Issue</div>
                       <div className="max-h-[300px] overflow-y-auto space-y-2">

@@ -908,3 +908,7 @@
 ## Standardize Actors and Source Filter Styling
 - [x] Copy exact Source filter CSS classes to Actors filter (text color, background, hover effect)
 - [x] Ensure both filters have identical appearance and behavior
+
+## Fix Actors Filter Transparent Background
+- [x] Apply exact Source filter container background styling to Actors filter
+- [x] Ensure Actors filter dropdown has solid opaque background (not transparent)
