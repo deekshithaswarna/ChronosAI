@@ -918,6 +918,12 @@
 - [x] Apply beige hover effect matching Source filter (hover:bg-accent)
 
 ## Fix Search Chronology Input Regression
-- [x] Verify searchTerm state is updating when typing in search input
-- [x] Reconnect search logic to table filtering function
-- [x] Ensure search works in combination with dropdown filters (Source, Actors, Issues)
+- [x] Search bar completely unresponsive - typing does not filter table rows
+- [x] Investigate why search stopped working again after previous fix
+- [x] Ensure search filters table automatically as user types
+
+## Fix Authentication Race Condition (Missing Authorization Header)
+- [ ] Implement request interceptor to dynamically read token from storage before each request
+- [ ] Add token rehydration logic to prevent requests before auth initialization
+- [ ] Implement 401 recovery handler with token refresh or redirect to login
+- [ ] Ensure chronology data fetch waits for auth provider initialization
