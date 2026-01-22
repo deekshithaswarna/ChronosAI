@@ -927,3 +927,8 @@
 - [ ] Add token rehydration logic to prevent requests before auth initialization
 - [ ] Implement 401 recovery handler with token refresh or redirect to login
 - [ ] Ensure chronology data fetch waits for auth provider initialization
+
+## Fix Search useMemo Dependency
+- [x] Verify globalSearch is in filteredAndSortedFacts useMemo dependency array
+- [x] Add globalSearch to dependencies if missing to trigger re-computation when typing
+- [x] Add guard for undefined facts to prevent crashes

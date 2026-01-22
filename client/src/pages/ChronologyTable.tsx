@@ -157,11 +157,11 @@ export default function ChronologyTable() {
   
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-  // Filter and sort facts
+  // Filter and sort
   const filteredAndSortedFacts = useMemo(() => {
-    if (!facts) return [];
-    
-    // Apply filters
+    if (!facts) {
+      return [];
+    }
     let filtered = facts;
     if (selectedPersons.length > 0) {
       filtered = filtered.filter(f => {
