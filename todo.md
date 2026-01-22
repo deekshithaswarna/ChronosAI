@@ -912,3 +912,7 @@
 ## Fix Actors Filter Transparent Background
 - [x] Apply exact Source filter container background styling to Actors filter
 - [x] Ensure Actors filter dropdown has solid opaque background (not transparent)
+
+## Fix Actors Filter Black Hover Effect
+- [x] Remove black hover effect from Actors filter items
+- [x] Apply beige hover effect matching Source filter (hover:bg-accent)

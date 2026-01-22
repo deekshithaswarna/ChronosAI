@@ -845,7 +845,7 @@ export default function ChronologyTable() {
                       {dateFilterMode === 'year' && (
                         <div className="max-h-[300px] overflow-y-auto">
                           {uniqueYears.map(year => (
-                            <label key={year} className="flex items-center gap-2 p-2 hover:bg-accent rounded cursor-pointer">
+                            <label key={year} className="flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-[oklch(0.90_0.03_60)]">
                               <Checkbox
                                 checked={selectedYears.includes(year)}
                                 onCheckedChange={(checked) => {
@@ -866,7 +866,7 @@ export default function ChronologyTable() {
                       {dateFilterMode === 'month' && (
                         <div className="max-h-[300px] overflow-y-auto">
                           {monthNames.map((month, index) => (
-                            <label key={index} className="flex items-center gap-2 p-2 hover:bg-accent rounded cursor-pointer">
+                            <label key={month} className="flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-[oklch(0.90_0.03_60)]">
                               <Checkbox
                                 checked={selectedMonths.includes(index + 1)}
                                 onCheckedChange={(checked) => {
@@ -944,7 +944,7 @@ export default function ChronologyTable() {
                     <div ref={sourceFilterRef} className="absolute top-full left-0 mt-1 bg-background border border-border rounded-md shadow-lg p-4 z-40 min-w-[250px]">
                       <div className="max-h-[300px] overflow-y-auto">
                         {uniqueSources.map(source => (
-                          <label key={source} className="flex items-center gap-2 p-2 hover:bg-accent rounded cursor-pointer">
+                          <label key={source} className="flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-[oklch(0.90_0.03_60)]">
                             <Checkbox
                               checked={selectedSources.includes(source)}
                               onCheckedChange={(checked) => {
@@ -989,7 +989,7 @@ export default function ChronologyTable() {
                           <div className="text-muted-foreground text-xs">No actors found</div>
                         ) : (
                           uniquePersons.map(person => (
-                            <label key={person} className="flex items-center gap-2 p-2 hover:bg-accent rounded cursor-pointer">
+                            <label key={person} className="flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-[oklch(0.90_0.03_60)]">
                               <Checkbox
                                 checked={selectedPersons.includes(person)}
                                 onCheckedChange={() => togglePerson(person)}
