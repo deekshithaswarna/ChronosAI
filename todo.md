@@ -904,3 +904,7 @@
 
 ## Actors Filter Hover Color Fix
 - [x] Fix Actors filter hover color to use beige shade instead of turning black (should match Source filter beige hover)
+
+## Standardize Actors and Source Filter Styling
+- [x] Copy exact Source filter CSS classes to Actors filter (text color, background, hover effect)
+- [x] Ensure both filters have identical appearance and behavior
