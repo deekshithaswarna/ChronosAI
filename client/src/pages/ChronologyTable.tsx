@@ -997,7 +997,7 @@ export default function ChronologyTable() {
                                 checked={selectedPersons.includes(person)}
                                 onCheckedChange={() => togglePerson(person)}
                               />
-                              <span className="text-sm text-black">{person}</span>
+                              <span className="text-sm">{person}</span>
                             </label>
                           ))
                         )}

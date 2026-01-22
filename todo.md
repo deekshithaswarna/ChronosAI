@@ -901,3 +901,6 @@
 
 ## Filter Hover Styling Fix
 - [x] Fix Actors filter hover styling to match Source filter behavior (currently turns black on hover)
+
+## Actors Filter Hover Color Fix
+- [x] Fix Actors filter hover color to use beige shade instead of turning black (should match Source filter beige hover)
