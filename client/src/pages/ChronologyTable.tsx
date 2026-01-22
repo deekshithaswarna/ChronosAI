@@ -985,20 +985,19 @@ export default function ChronologyTable() {
                   {showPersonFilter && (
                     <div 
                       ref={personFilterRef}
-                      className="absolute top-full left-0 mt-2 bg-card border border-foreground/20 rounded-lg shadow-lg p-4 min-w-[200px] z-20 text-foreground font-normal text-sm"
+                      className="absolute top-full left-0 mt-1 bg-background border border-border rounded-md shadow-lg p-4 min-w-[250px] z-20"
                     >
-                      <div className="font-semibold mb-2 text-xs uppercase tracking-wide">Filter by Actor</div>
-                      <div className="max-h-[300px] overflow-y-auto space-y-2">
+                      <div className="max-h-[300px] overflow-y-auto">
                         {uniquePersons.length === 0 ? (
                           <div className="text-muted-foreground text-xs">No actors found</div>
                         ) : (
                           uniquePersons.map(person => (
-                            <label key={person} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-1 rounded">
+                            <label key={person} className="flex items-center gap-2 cursor-pointer hover:bg-accent p-2 rounded">
                               <Checkbox
                                 checked={selectedPersons.includes(person)}
                                 onCheckedChange={() => togglePerson(person)}
                               />
-                              <span className="text-sm">{person}</span>
+                              <span className="text-sm text-black">{person}</span>
                             </label>
                           ))
                         )}

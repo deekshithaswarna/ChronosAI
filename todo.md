@@ -898,3 +898,6 @@
 - [x] Moved all saveToHistory() calls to BEFORE state changes
 - [x] Updated handleAddIssue, handleRemoveIssue, handleDescriptionSave, handleDateSave, confirmDelete
 - [x] Test undo/redo functionality with real edits
+
+## Filter Hover Styling Fix
+- [x] Fix Actors filter hover styling to match Source filter behavior (currently turns black on hover)
