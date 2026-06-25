@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
+import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
-import { ArrowUpDown, Download, Filter, X, Plus, Pencil, Trash2, Search, Undo, Redo } from 'lucide-react';
+import { ArrowUpDown, Download, Filter, X, Plus, Pencil, Trash2, Search, Undo, Redo, Star, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,10 +14,48 @@ import { Document, Packer, Paragraph, Table, TableCell, TableRow, TextRun, Width
 type SortField = 'date' | 'event' | 'source';
 type SortDirection = 'asc' | 'desc';
 
+// A fact counts as "key" when the user has explicitly flagged it, or (absent an
+// override) its AI materiality meets the threshold. Mirrors the server constant.
+const KEY_MATERIALITY_THRESHOLD = 70;
+function isKeyFact(fact: any): boolean {
+  if (fact.isKeyOverride === true) return true;
+  if (fact.isKeyOverride === false) return false;
+  return (fact.materiality ?? -1) >= KEY_MATERIALITY_THRESHOLD;
+}
+
 export default function ChronologyTable() {
+  const [, navigate] = useLocation();
   const { data: facts, isLoading } = trpc.facts.list.useQuery();
   const updateFactMutation = trpc.facts.update.useMutation();
+  const setKeyMutation = trpc.facts.setKey.useMutation();
+  const caseMemoryQuery = trpc.caseMemory.get.useQuery();
   const utils = trpc.useUtils();
+
+  // "Key facts only" view + one-time intro prompt to review Case Memory.
+  const [showKeyOnly, setShowKeyOnly] = useState(false);
+  const [showIntro, setShowIntro] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!localStorage.getItem('chronos-chronology-intro-seen')) {
+      setShowIntro(true);
+    }
+  }, []);
+
+  const dismissIntro = () => {
+    localStorage.setItem('chronos-chronology-intro-seen', '1');
+    setShowIntro(false);
+  };
+
+  const toggleKey = async (fact: any) => {
+    const next = !isKeyFact(fact);
+    try {
+      await setKeyMutation.mutateAsync({ id: fact.id, isKey: next });
+      utils.facts.list.invalidate();
+    } catch {
+      // non-fatal
+    }
+  };
   
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
@@ -163,6 +202,9 @@ export default function ChronologyTable() {
       return [];
     }
     let filtered = facts;
+    if (showKeyOnly) {
+      filtered = filtered.filter(isKeyFact);
+    }
     if (selectedPersons.length > 0) {
       filtered = filtered.filter(f => {
         if (!f.actor) return false;
@@ -242,7 +284,7 @@ export default function ChronologyTable() {
       
       return sortDirection === 'asc' ? comparison : -comparison;
     });
-  }, [facts, sortField, sortDirection, selectedPersons, selectedIssues, selectedSources, dateFilterMode, selectedYears, selectedMonths, dateRangeFrom, dateRangeTo, globalSearch]);
+  }, [facts, sortField, sortDirection, selectedPersons, selectedIssues, selectedSources, dateFilterMode, selectedYears, selectedMonths, dateRangeFrom, dateRangeTo, globalSearch, showKeyOnly]);
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
@@ -738,6 +780,15 @@ export default function ChronologyTable() {
             )}
           </div>
           <div className="flex gap-2">
+            <Button
+              variant={showKeyOnly ? 'default' : 'outline'}
+              className="gap-2"
+              onClick={() => setShowKeyOnly(v => !v)}
+              title="Show only facts flagged as key to the case"
+            >
+              <Star className={`h-4 w-4 ${showKeyOnly ? 'fill-current' : ''}`} />
+              {showKeyOnly ? 'Showing key facts' : `Key facts (${facts.filter(isKeyFact).length})`}
+            </Button>
             <Button className="gap-2" onClick={() => { setExportType('pdf'); setShowExportModal(true); }}>
               <Download className="h-4 w-4" />
               Export PDF
@@ -1063,11 +1114,14 @@ export default function ChronologyTable() {
             {/* Table Body with Zebra Striping */}
             <tbody>
               {filteredAndSortedFacts.map((fact, index) => (
-                <tr 
+                <tr
                   key={fact.id}
                   className={`relative border-t border-foreground/10 hover:bg-foreground/5 transition-colors ${
-                    index % 2 === 0 ? 'bg-transparent' : 'bg-foreground/[0.02]'
+                    isKeyFact(fact)
+                      ? 'bg-[#E07A5F]/[0.08]'
+                      : index % 2 === 0 ? 'bg-transparent' : 'bg-foreground/[0.02]'
                   }`}
+                  style={isKeyFact(fact) ? { boxShadow: 'inset 4px 0 0 0 #E07A5F' } : undefined}
                   onMouseEnter={() => setHoveredRowId(fact.id)}
                   onMouseLeave={() => setHoveredRowId(null)}
                 >
@@ -1089,12 +1143,27 @@ export default function ChronologyTable() {
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
-                    <span 
-                      className="font-medium text-foreground cursor-pointer hover:bg-foreground/5 px-1 py-0.5 rounded transition-colors"
-                      onClick={() => startEditingDate(fact.id)}
-                    >
-                      {formatDate(fact.eventDate)}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => toggleKey(fact)}
+                        className={`flex-shrink-0 p-0.5 rounded transition-colors ${
+                          isKeyFact(fact) ? 'text-[#E07A5F]' : 'text-[#C8C8C0] hover:text-[#E07A5F]'
+                        }`}
+                        title={
+                          isKeyFact(fact)
+                            ? `Key fact${fact.materialityReason ? ` — ${fact.materialityReason}` : ''}. Click to unflag.`
+                            : `Not flagged as key${fact.materialityReason ? ` — ${fact.materialityReason}` : ''}. Click to flag.`
+                        }
+                      >
+                        <Star className={`h-4 w-4 ${isKeyFact(fact) ? 'fill-current' : ''}`} />
+                      </button>
+                      <span
+                        className="font-medium text-foreground cursor-pointer hover:bg-foreground/5 px-1 py-0.5 rounded transition-colors"
+                        onClick={() => startEditingDate(fact.id)}
+                      >
+                        {formatDate(fact.eventDate)}
+                      </span>
+                    </div>
                     {editingDateId === fact.id && (
                       <div className="absolute top-0 left-0 w-full z-50">
                         <input
@@ -1375,6 +1444,42 @@ export default function ChronologyTable() {
               className="bg-foreground text-background hover:bg-foreground/90"
             >
               Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* One-time intro: nudge the user to review Case Memory first */}
+      <Dialog open={showIntro} onOpenChange={(open) => { if (!open) dismissIntro(); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-[#E07A5F]" />
+              Before you review the chronology
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-2 space-y-3 text-sm text-foreground">
+            <p>
+              Chronos flags the events most <span className="font-semibold">material to your case</span>
+              {' '}(shown with a <Star className="inline h-4 w-4 text-[#E07A5F] fill-current align-text-bottom" /> and a highlighted row).
+              These are based on the tool's understanding of your case.
+            </p>
+            <p className="text-muted-foreground">
+              {caseMemoryQuery.data?.summary
+                ? 'Open Case Memory to check that the case summary is right — then use “Re-evaluate key facts” so the highlights reflect it. You can also flag/unflag any event yourself with its star.'
+                : 'No case summary yet. Open Case Memory to generate one from your documents — that’s what powers the key-fact highlighting. You can still flag events manually with their star.'}
+            </p>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={dismissIntro}>
+              Review chronology
+            </Button>
+            <Button
+              className="gap-2"
+              onClick={() => { dismissIntro(); navigate('/case-memory'); }}
+            >
+              <Sparkles className="h-4 w-4" />
+              Open Case Memory
             </Button>
           </DialogFooter>
         </DialogContent>

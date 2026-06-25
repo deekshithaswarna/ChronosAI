@@ -1,6 +1,6 @@
 import { eq, and, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, documents, facts, actors, issues, InsertDocument, InsertFact, InsertActor, InsertIssue } from "../drizzle/schema";
+import { InsertUser, users, documents, facts, actors, issues, InsertDocument, InsertFact, InsertActor, InsertIssue, caseMemory, InsertCaseMemory } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -178,6 +178,9 @@ export async function getUserFacts(userId: number) {
       citation: facts.citation,
       comments: facts.comments,
       confidence: facts.confidence,
+      materiality: facts.materiality,
+      materialityReason: facts.materialityReason,
+      isKeyOverride: facts.isKeyOverride,
       pageNumber: facts.pageNumber,
       createdAt: facts.createdAt,
       updatedAt: facts.updatedAt,
@@ -239,6 +242,53 @@ export async function renamePersonInFacts(userId: number, oldName: string, newNa
         .where(eq(facts.id, fact.id));
     }
   }
+}
+
+export async function updateFactActor(id: number, actor: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.update(facts)
+    .set({ actor, updatedAt: new Date() })
+    .where(eq(facts.id, id));
+}
+
+export async function updateFactMateriality(id: number, materiality: number, reason: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.update(facts)
+    .set({ materiality, materialityReason: reason, updatedAt: new Date() })
+    .where(eq(facts.id, id));
+}
+
+export async function setFactKeyOverride(id: number, userId: number, isKey: boolean | null) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.update(facts)
+    .set({ isKeyOverride: isKey, updatedAt: new Date() })
+    .where(and(eq(facts.id, id), eq(facts.userId, userId)));
+}
+
+// Case Memory queries (one row per user for now)
+export async function getCaseMemory(userId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(caseMemory).where(eq(caseMemory.userId, userId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function upsertCaseMemory(userId: number, data: Partial<Omit<InsertCaseMemory, "userId">>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const values: InsertCaseMemory = { userId, ...data };
+  const updateSet: Record<string, unknown> = { ...data, updatedAt: new Date() };
+
+  await db.insert(caseMemory).values(values).onDuplicateKeyUpdate({ set: updateSet });
+  return getCaseMemory(userId);
 }
 
 export async function deleteFact(id: number, userId: number) {

@@ -209,10 +209,19 @@ const normalizeToolChoice = (
   return toolChoice;
 };
 
-const resolveApiUrl = () =>
-  ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
-    ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`
-    : "https://forge.manus.im/v1/chat/completions";
+const resolveApiUrl = () => {
+  const base = ENV.forgeApiUrl?.trim();
+  if (!base) return "https://forge.manus.im/v1/chat/completions";
+  // Allow pointing at a full OpenAI-compatible endpoint directly
+  // (e.g. Google Gemini's https://generativelanguage.googleapis.com/v1beta/openai/chat/completions)
+  if (base.endsWith("/chat/completions")) return base;
+  return `${base.replace(/\/$/, "")}/v1/chat/completions`;
+};
+
+// The Manus Forge proxy accepts a non-standard `thinking` param; other
+// OpenAI-compatible providers (e.g. Google Gemini) reject unknown fields.
+const isForgeEndpoint = () =>
+  !ENV.forgeApiUrl || ENV.forgeApiUrl.includes("manus");
 
 const assertApiKey = () => {
   if (!ENV.forgeApiKey) {
@@ -297,8 +306,10 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   }
 
   payload.max_tokens = 32768
-  payload.thinking = {
-    "budget_tokens": 128
+  if (isForgeEndpoint()) {
+    payload.thinking = {
+      "budget_tokens": 128
+    }
   }
 
   const normalizedResponseFormat = normalizeResponseFormat({

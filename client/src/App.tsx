@@ -5,6 +5,7 @@ import { Route, Switch, useLocation, Link } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
+import CaseMemory from "./pages/CaseMemory";
 import ChronologyTable from "./pages/ChronologyTable";
 import NotFound from "./pages/NotFound";
 
@@ -38,6 +39,16 @@ function Router() {
               Upload Documents
             </Link>
             <Link
+              href="/case-memory"
+              className={`text-base font-medium transition-colors ${
+                location === "/case-memory"
+                  ? "font-bold border-b-2 border-foreground pb-1"
+                  : "text-foreground hover:text-[#E07A5F]"
+              }`}
+            >
+              Case Memory
+            </Link>
+            <Link
               href="/chronology"
               className={`text-base font-medium transition-colors ${
                 location === "/chronology"
@@ -56,6 +67,7 @@ function Router() {
       <main className="flex-1">
         <Switch>
           <Route path="/" component={Home} />
+          <Route path="/case-memory" component={CaseMemory} />
           <Route path="/chronology" component={ChronologyTable} />
           <Route path="/404" component={NotFound} />
           <Route component={NotFound} />

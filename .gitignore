@@ -106,6 +106,9 @@ temp/
 *.sqlite
 *.sqlite3
 
+# Locally-stored uploads (runtime user data when running without the Forge proxy)
+/uploads/*/
+
 # Python virtual environment
 venv/
 manual_venv/

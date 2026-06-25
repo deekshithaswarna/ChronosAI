@@ -39,10 +39,15 @@ export function getSessionCookieOptions(
   //       ? hostname
   //       : undefined;
 
+  const secure = isSecureRequest(req);
+
+  // Browsers reject `SameSite=None` cookies that aren't `Secure`, so over plain
+  // http (local dev) the session cookie would be silently dropped. Fall back to
+  // `Lax` there — the app and API are same-origin, so it's sent correctly.
   return {
     httpOnly: true,
     path: "/",
-    sameSite: "none",
-    secure: isSecureRequest(req),
+    sameSite: secure ? "none" : "lax",
+    secure,
   };
 }
