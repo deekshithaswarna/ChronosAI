@@ -45,27 +45,9 @@ export const appRouter = router({
         const fileKey = `${userId}/documents/${nanoid()}-${input.filename}`;
         const { url: s3Url } = await storagePut(fileKey, fileBuffer, input.mimeType);
         
-        // Extract Smart Title from first 2 pages immediately (for PDFs)
-        let smartTitle = input.filename;
-        if (input.mimeType === 'application/pdf') {
-          try {
-            console.log('[Smart Title] Starting extraction for:', input.filename);
-            const { extractFirstPages } = await import('./documentExtractor');
-            console.log('[Smart Title] Extracting first 2 pages...');
-            const firstPagesText = await extractFirstPages(fileBuffer, 2);
-            console.log('[Smart Title] Extracted text length:', firstPagesText.length);
-            console.log('[Smart Title] First 200 chars:', firstPagesText.substring(0, 200));
-            console.log('[Smart Title] Calling extractSmartTitle...');
-            smartTitle = await extractSmartTitle(firstPagesText);
-            console.log('[Smart Title] Extracted title:', smartTitle);
-          } catch (error) {
-            console.error('[Smart Title] ERROR:', error);
-            console.error('[Smart Title] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-            // Fall back to filename if extraction fails
-          }
-        }
-        
-        // Create document record with Smart Title
+        // Use the filename as the initial title. The descriptive document title
+        // is produced by the main extraction pass (processDocumentAsync below),
+        // so we skip a separate per-upload LLM call here to conserve API quota.
         const documentId = await db.createDocument({
           userId,
           filename: input.filename,
@@ -75,7 +57,7 @@ export const appRouter = router({
           s3Key: fileKey,
           s3Url,
           status: "pending",
-          documentTitle: smartTitle,
+          documentTitle: input.filename,
         });
         
         // Trigger async processing (don't await)

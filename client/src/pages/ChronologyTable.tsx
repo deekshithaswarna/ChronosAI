@@ -1130,14 +1130,15 @@ export default function ChronologyTable() {
                     {/* Trash Icon - Floats outside table to the left */}
                     <button
                       onClick={() => handleDeleteFact(fact.id)}
-                      className="absolute text-[#9CA3AF] hover:text-[#EF4444] transition-all p-1 rounded"
-                      style={{ 
-                        left: '-32px', 
-                        top: '16px',
+                      onMouseEnter={() => setHoveredRowId(fact.id)}
+                      onMouseLeave={() => setHoveredRowId(null)}
+                      className="absolute text-[#9CA3AF] hover:text-[#EF4444] transition-opacity p-1 pr-3 rounded"
+                      style={{
+                        left: '-26px',
+                        top: '14px',
                         opacity: hoveredRowId === fact.id ? 1 : 0,
+                        // Hit-box overlaps the row edge so moving onto it keeps the row "hovered" and clickable.
                         pointerEvents: hoveredRowId === fact.id ? 'auto' : 'none',
-                        transition: 'opacity 0.3s ease, color 0.2s ease',
-                        transitionDelay: hoveredRowId === fact.id ? '0s' : '0.8s'
                       }}
                       title="Delete this event"
                     >
@@ -1190,18 +1191,19 @@ export default function ChronologyTable() {
                     onMouseEnter={() => setHoveredDescriptionId(fact.id)}
                     onMouseLeave={() => setHoveredDescriptionId(null)}
                   >
-                    <div 
-                      className="flex items-start gap-2 cursor-pointer hover:bg-foreground/5 p-1 -m-1 rounded transition-colors"
+                    <div
+                      className="cursor-pointer hover:bg-foreground/5 p-1 -m-1 rounded transition-colors"
                       onClick={() => startEditingDescription(fact.id)}
                       style={{ visibility: editingDescriptionId === fact.id ? 'hidden' : 'visible' }}
                     >
-                      <p className="text-foreground leading-relaxed flex-1">
+                      <p className="text-foreground leading-relaxed pr-5">
                         {getDescriptionValue(fact)}
                       </p>
-                      {hoveredDescriptionId === fact.id && (
-                        <Pencil className="h-3 w-3 text-muted-foreground flex-shrink-0 mt-1" />
-                      )}
                     </div>
+                    {/* Edit affordance as an overlay so it never reflows the text */}
+                    {hoveredDescriptionId === fact.id && editingDescriptionId !== fact.id && (
+                      <Pencil className="absolute top-3 right-3 h-3 w-3 text-muted-foreground pointer-events-none" />
+                    )}
                     {editingDescriptionId === fact.id && (
                       <div className="absolute top-0 left-0 w-full z-50">
                         <Textarea
