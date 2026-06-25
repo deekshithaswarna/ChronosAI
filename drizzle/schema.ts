@@ -64,14 +64,39 @@ export const facts = mysqlTable("facts", {
   
   // Metadata
   pageNumber: int("pageNumber"), // Source page in document
-  confidence: int("confidence").default(100), // LLM confidence score (0-100)
-  
+  confidence: int("confidence").default(100), // Generic event importance (0-100), case-agnostic
+
+  // Case-contextual materiality (derived from the user's Case Memory)
+  materiality: int("materiality"), // AI relevance to THIS case, 0-100 (null = not yet evaluated)
+  materialityReason: text("materialityReason"), // One-line rationale for why it is / isn't key
+  isKeyOverride: boolean("isKeyOverride"), // User override; null = follow AI threshold
+
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 export type Fact = typeof facts.$inferSelect;
 export type InsertFact = typeof facts.$inferInsert;
+
+/**
+ * Case Memory: the AI-deduced (user-editable) theory of the case that drives
+ * materiality scoring. One row per user for now; the `id` PK keeps the door
+ * open to a multi-case model later.
+ */
+export const caseMemory = mysqlTable("case_memory", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(), // one case per user (for now)
+  title: text("title"), // short case label
+  summary: longtext("summary"), // narrative case summary (editable)
+  parties: json("parties").$type<string[]>(), // key parties
+  issues: json("issues").$type<string[]>(), // disputed issues / claims
+  source: mysqlEnum("source", ["ai", "user", "uploaded"]).default("ai").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type CaseMemory = typeof caseMemory.$inferSelect;
+export type InsertCaseMemory = typeof caseMemory.$inferInsert;
 
 /**
  * Actor categories for filtering

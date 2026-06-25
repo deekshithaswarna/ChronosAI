@@ -1,7 +1,34 @@
 // Preconfigured storage helpers for Manus WebDev templates
 // Uses the Biz-provided storage proxy (Authorization: Bearer <token>)
+// Local fallback: when the Forge storage proxy is not configured, files are
+// written to ./uploads and served by the express static route at /uploads.
 
 import { ENV } from './_core/env';
+import { promises as fs } from 'fs';
+import path from 'path';
+
+// Local-disk storage is used whenever the Forge storage proxy URL/key is absent.
+const LOCAL_UPLOAD_DIR = path.resolve(process.cwd(), 'uploads');
+
+function useLocalStorage(): boolean {
+  // Only the Manus Forge proxy provides a storage endpoint. When the Forge URL
+  // is unset or repurposed for another provider (e.g. Gemini for the LLM),
+  // fall back to local disk.
+  return !(ENV.forgeApiUrl || "").includes("manus");
+}
+
+async function localPut(
+  relKey: string,
+  data: Buffer | Uint8Array | string
+): Promise<{ key: string; url: string }> {
+  const key = normalizeKey(relKey);
+  const dest = path.join(LOCAL_UPLOAD_DIR, key);
+  await fs.mkdir(path.dirname(dest), { recursive: true });
+  const buffer =
+    typeof data === 'string' ? Buffer.from(data) : Buffer.from(data as Uint8Array);
+  await fs.writeFile(dest, buffer);
+  return { key, url: `/uploads/${key}` };
+}
 
 type StorageConfig = { baseUrl: string; apiKey: string };
 
@@ -72,6 +99,9 @@ export async function storagePut(
   data: Buffer | Uint8Array | string,
   contentType = "application/octet-stream"
 ): Promise<{ key: string; url: string }> {
+  if (useLocalStorage()) {
+    return localPut(relKey, data);
+  }
   const { baseUrl, apiKey } = getStorageConfig();
   const key = normalizeKey(relKey);
   const uploadUrl = buildUploadUrl(baseUrl, key);
@@ -93,6 +123,10 @@ export async function storagePut(
 }
 
 export async function storageGet(relKey: string): Promise<{ key: string; url: string; }> {
+  if (useLocalStorage()) {
+    const key = normalizeKey(relKey);
+    return { key, url: `/uploads/${key}` };
+  }
   const { baseUrl, apiKey } = getStorageConfig();
   const key = normalizeKey(relKey);
   return {

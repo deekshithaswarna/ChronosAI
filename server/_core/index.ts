@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
+import path from "path";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
@@ -33,6 +34,8 @@ async function startServer() {
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  // Serve locally-stored uploads (used when the Forge storage proxy is absent)
+  app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
   // tRPC API
@@ -57,9 +60,29 @@ async function startServer() {
     console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
   }
 
+  // Last-resort error middleware: a malformed request URL (e.g. a bad %-escape)
+  // makes Express throw a URIError during routing. Without this it bubbles up
+  // and crashes the process; here we turn it into a 400 instead.
+  app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    if (err instanceof URIError) {
+      res.status(400).send("Bad Request");
+      return;
+    }
+    console.error("[Express] Unhandled error:", err);
+    if (!res.headersSent) res.status(500).send("Internal Server Error");
+  });
+
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
   });
 }
+
+// Keep the dev server alive even if a stray async error escapes — log instead of crash.
+process.on("uncaughtException", err => {
+  console.error("[Process] Uncaught exception (kept alive):", err);
+});
+process.on("unhandledRejection", reason => {
+  console.error("[Process] Unhandled rejection (kept alive):", reason);
+});
 
 startServer().catch(console.error);

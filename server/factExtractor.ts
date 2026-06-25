@@ -64,7 +64,13 @@ DOCUMENT TITLE:
 FACT EXTRACTION - FOCUS ON:
 - Date: Exact date (calculate if relative like "the following day" or "two weeks later")
 - Time: Specific time if mentioned (e.g., "3:00 PM", "morning")
-- Actor: Who performed the action. IMPORTANT: If multiple people/entities are involved, list them as comma-separated values (e.g., "John Doe, Jane Smith, ABC Corp"). Each name should be a separate entity.
+- Actor: Who performed the action. If multiple people/entities are involved, list them as comma-separated values (e.g., "John Doe, Jane Smith, ABC Corp"). Each comma-separated value MUST be ONE distinct entity.
+  NAME NORMALIZATION (critical for grouping the same person consistently):
+  • Write every person as "Firstname Lastname" (natural order). NEVER write "Lastname, Firstname" — the comma is reserved for separating different people, so "Sharma, Priya" would wrongly be read as two people.
+  • Drop all honorifics/titles (Mr, Mrs, Ms, Miss, Dr, Prof, Sir, etc.). Write "Priya Sharma", not "Ms Priya Sharma" or "Sharma, Priya Ms".
+  • If the same person appears under different forms in this document (e.g. "Priya", "Ms Sharma", "Priya Sharma"), resolve them to ONE canonical full name and use it for ALL of that person's events. Prefer the most complete "Firstname Lastname" form found anywhere in the document.
+  • Only fall back to a single name (first OR last only) if the document never reveals the person's full name.
+  • For organisations/companies, use the full official name consistently (e.g. "Acme Corp").
 - Event: DETAILED, COMPREHENSIVE SUMMARY with FULL CONTEXT. CRITICAL: Always include the actor's name(s) in the description to make it self-contained. For example, write "Andrew Swarthout graduated from the University of Arizona" NOT just "Graduated from the University of Arizona". Do NOT be overly concise. Include key context, specific actions, and relevant details. Aim for 2-4 sentences that capture the full significance of the event. Include what happened, why it matters, and any important context or consequences.
 - Importance: Rate 1-10 (10 = critical legal event like filing, verdict; 1 = minor administrative)
 - Page Number: The page number where this event was found (look for [PAGE X] markers in the text)
@@ -114,7 +120,7 @@ ${textWithPageMarkers.substring(0, 15000)}`;
                   properties: {
                     date: { type: 'string', description: 'ISO date format YYYY-MM-DD' },
                     time: { type: 'string', description: 'Time if mentioned, empty string if not available' },
-                    actor: { type: 'string', description: 'Who performed the action' },
+                    actor: { type: 'string', description: 'Who performed the action. Comma-separated for multiple distinct entities. Each person as canonical "Firstname Lastname" with no titles; never "Lastname, Firstname".' },
                     event: { type: 'string', description: 'What happened' },
                     importance: { type: 'integer', description: 'Importance score 1-10', minimum: 1, maximum: 10 },
                     citation: { type: 'string', description: 'Legal citation if present, empty string if not available' },

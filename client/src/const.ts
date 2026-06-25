@@ -4,6 +4,13 @@ export { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 export const getLoginUrl = () => {
   const oauthPortalUrl = import.meta.env.VITE_OAUTH_PORTAL_URL;
   const appId = import.meta.env.VITE_APP_ID;
+
+  // Local dev: no Manus OAuth portal configured -> use the dev-login bypass,
+  // which seeds a session cookie and redirects back to the app.
+  if (!oauthPortalUrl) {
+    return "/api/dev/login";
+  }
+
   const redirectUri = `${window.location.origin}/api/oauth/callback`;
   const state = btoa(redirectUri);
 

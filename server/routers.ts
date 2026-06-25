@@ -3,7 +3,10 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { extractText } from './documentExtractor';
+import { reconcileUserActors } from './actorReconciler';
 import { extractFactsFromText } from './factExtractor';
+import { generateCaseSummary } from './caseSummary';
+import { evaluateMateriality } from './materiality';
 import { z } from "zod";
 import * as db from "./db";
 import { storagePut } from "./storage";
@@ -131,6 +134,26 @@ export const appRouter = router({
       return db.getUserFacts(ctx.user.id);
     }),
 
+    // Reconcile actor name variants (same person written different ways) across
+    // all of the user's facts. Runs automatically after each upload too.
+    reconcileActors: protectedProcedure.mutation(async ({ ctx }) => {
+      await reconcileUserActors(ctx.user.id);
+      return { success: true };
+    }),
+
+    // Re-score every fact's materiality against the current Case Memory.
+    reEvaluateKeyFacts: protectedProcedure.mutation(async ({ ctx }) => {
+      return evaluateMateriality(ctx.user.id);
+    }),
+
+    // User override for whether a fact is "key". Pass null to revert to the AI decision.
+    setKey: protectedProcedure
+      .input(z.object({ id: z.number(), isKey: z.boolean().nullable() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.setFactKeyOverride(input.id, ctx.user.id, input.isKey);
+        return { success: true };
+      }),
+
     // Get facts with optional filters
     filter: protectedProcedure
       .input(z.object({
@@ -203,6 +226,38 @@ export const appRouter = router({
       return db.getUserIssues(ctx.user.id);
     }),
   }),
+
+  caseMemory: router({
+    // Current case memory for the user (null if none yet).
+    get: protectedProcedure.query(async ({ ctx }) => {
+      return (await db.getCaseMemory(ctx.user.id)) ?? null;
+    }),
+
+    // (Re)generate the case summary from the user's facts via the LLM.
+    generate: protectedProcedure.mutation(async ({ ctx }) => {
+      const result = await generateCaseSummary(ctx.user.id);
+      return result ?? null;
+    }),
+
+    // Save user edits (or a pasted/own summary). Marks the source accordingly.
+    update: protectedProcedure
+      .input(z.object({
+        title: z.string().optional(),
+        summary: z.string(),
+        parties: z.array(z.string()).optional(),
+        issues: z.array(z.string()).optional(),
+        source: z.enum(["ai", "user", "uploaded"]).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        return (await db.upsertCaseMemory(ctx.user.id, {
+          title: input.title,
+          summary: input.summary,
+          parties: input.parties,
+          issues: input.issues,
+          source: input.source ?? "user",
+        })) ?? null;
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;
@@ -270,11 +325,20 @@ async function extractSmartTitle(firstPagesText: string): Promise<string> {
 async function processDocumentAsync(documentId: number, s3Url: string, mimeType: string, filename: string) {
   try {
     await db.updateDocumentStatus(documentId, "processing");
-    
-    // Download file from S3
-    const response = await axios.get(s3Url, { responseType: 'arraybuffer' });
-    const fileBuffer = Buffer.from(response.data);
-    
+
+    // Download file: local-disk storage returns a relative /uploads/ path
+    // (read straight from disk); remote storage returns an absolute URL.
+    let fileBuffer: Buffer;
+    if (s3Url.startsWith("/uploads/")) {
+      const { promises: fs } = await import("fs");
+      const path = await import("path");
+      const rel = s3Url.replace(/^\/uploads\//, "");
+      fileBuffer = await fs.readFile(path.join(process.cwd(), "uploads", rel));
+    } else {
+      const response = await axios.get(s3Url, { responseType: 'arraybuffer' });
+      fileBuffer = Buffer.from(response.data);
+    }
+
     // Extract text using Node.js
     const extractedData = await extractText(fileBuffer, mimeType);
     
@@ -305,7 +369,12 @@ async function processDocumentAsync(documentId: number, s3Url: string, mimeType:
     // Update document status and save document title
     await db.updateDocumentWithTitle(documentId, extractionResult.documentTitle, extractedData.text);
     await db.updateDocumentStatus(documentId, "completed");
-    
+
+    // Reconcile actor names across all of this user's facts so the same person
+    // written different ways (e.g. "Priya" / "Priya Sharma" / "Sharma, Priya")
+    // collapses to one canonical name. Best-effort; never fails the upload.
+    await reconcileUserActors(document.userId);
+
   } catch (error) {
     console.error(`Document processing failed for ${documentId}:`, error);
     await db.updateDocumentStatus(documentId, "failed", String(error));
