@@ -546,7 +546,15 @@ async function refreshCaseData(userId: number) {
     await db.replaceDramatisPersonae(userId, []);
     return;
   }
-  await generateCaseSummary(userId);
+  // Preserve a user-edited/uploaded case summary (it's their theory of the
+  // case). Only (re)generate when the summary is AI-owned or doesn't exist yet.
+  // A brand-new case starts clean because deleting all docs clears the memory.
+  const existing = await db.getCaseMemory(userId);
+  const userOwned = existing && (existing.source === 'user' || existing.source === 'uploaded');
+  if (!userOwned) {
+    await generateCaseSummary(userId);
+  }
+  // Dramatis personae has no manual-edit surface, so always keep it in sync.
   await generateDramatisPersonae(userId);
 }
 
