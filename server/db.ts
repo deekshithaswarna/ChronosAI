@@ -1,6 +1,6 @@
 import { eq, and, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, documents, facts, actors, issues, InsertDocument, InsertFact, InsertActor, InsertIssue, caseMemory, InsertCaseMemory } from "../drizzle/schema";
+import { InsertUser, users, documents, facts, actors, issues, InsertDocument, InsertFact, InsertActor, InsertIssue, caseMemory, InsertCaseMemory, dramatisPersonae, InsertDramatisPersona } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -262,6 +262,15 @@ export async function updateFactMateriality(id: number, materiality: number, rea
     .where(eq(facts.id, id));
 }
 
+export async function updateFactComments(id: number, comments: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.update(facts)
+    .set({ comments, updatedAt: new Date() })
+    .where(eq(facts.id, id));
+}
+
 export async function setFactKeyOverride(id: number, userId: number, isKey: boolean | null) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -269,6 +278,31 @@ export async function setFactKeyOverride(id: number, userId: number, isKey: bool
   await db.update(facts)
     .set({ isKeyOverride: isKey, updatedAt: new Date() })
     .where(and(eq(facts.id, id), eq(facts.userId, userId)));
+}
+
+// Dramatis personae queries
+export async function getDramatisPersonae(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(dramatisPersonae).where(eq(dramatisPersonae.userId, userId)).orderBy(dramatisPersonae.sortOrder);
+}
+
+// Replace the whole cast for a user (generation regenerates everything).
+export async function replaceDramatisPersonae(userId: number, people: Array<{ name: string; role: string; narrative: string }>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.delete(dramatisPersonae).where(eq(dramatisPersonae.userId, userId));
+  if (people.length === 0) return;
+
+  const rows: InsertDramatisPersona[] = people.map((p, i) => ({
+    userId,
+    name: p.name,
+    role: p.role,
+    narrative: p.narrative,
+    sortOrder: i,
+  }));
+  await db.insert(dramatisPersonae).values(rows);
 }
 
 // Case Memory queries (one row per user for now)

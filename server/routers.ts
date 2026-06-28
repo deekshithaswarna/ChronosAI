@@ -7,6 +7,7 @@ import { reconcileUserActors } from './actorReconciler';
 import { extractFactsFromText } from './factExtractor';
 import { generateCaseSummary } from './caseSummary';
 import { evaluateMateriality } from './materiality';
+import { generateDramatisPersonae } from './dramatisPersonae';
 import { z } from "zod";
 import * as db from "./db";
 import { storagePut } from "./storage";
@@ -239,6 +240,62 @@ export const appRouter = router({
           source: input.source ?? "user",
         })) ?? null;
       }),
+  }),
+
+  dramatisPersonae: router({
+    // Cast of parties, each with the documents/pages that reference them
+    // (references are derived live from facts so they stay current).
+    get: protectedProcedure.query(async ({ ctx }) => {
+      const [people, facts] = await Promise.all([
+        db.getDramatisPersonae(ctx.user.id),
+        db.getUserFacts(ctx.user.id),
+      ]);
+
+      const norm = (s: string) => s.trim().toLowerCase();
+
+      return people.map(person => {
+        // Find documents + page numbers where this person is an actor.
+        const byDoc = new Map<number, { documentId: number; documentTitle: string | null; documentName: string | null; documentUrl: string | null; pages: Set<number> }>();
+        for (const f of facts) {
+          if (!f.actor) continue;
+          const names = f.actor.split(/[,;]/).map(a => norm(a));
+          if (!names.includes(norm(person.name))) continue;
+          const docId = f.documentId;
+          if (!byDoc.has(docId)) {
+            byDoc.set(docId, {
+              documentId: docId,
+              documentTitle: f.documentTitle ?? null,
+              documentName: f.documentName ?? null,
+              documentUrl: f.documentUrl ?? null,
+              pages: new Set<number>(),
+            });
+          }
+          if (f.pageNumber) byDoc.get(docId)!.pages.add(f.pageNumber);
+        }
+
+        const references = [...byDoc.values()].map(r => ({
+          documentId: r.documentId,
+          documentTitle: r.documentTitle,
+          documentName: r.documentName,
+          documentUrl: r.documentUrl,
+          pages: [...r.pages].sort((a, b) => a - b),
+        }));
+
+        return {
+          id: person.id,
+          name: person.name,
+          role: person.role,
+          narrative: person.narrative,
+          references,
+        };
+      });
+    }),
+
+    // (Re)generate the cast from the user's facts via the LLM.
+    generate: protectedProcedure.mutation(async ({ ctx }) => {
+      await generateDramatisPersonae(ctx.user.id);
+      return { success: true };
+    }),
   }),
 });
 
