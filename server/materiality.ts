@@ -54,12 +54,74 @@ export async function evaluateMateriality(userId: number): Promise<{ scored: num
     .filter(Boolean)
     .join('\n\n');
 
-  // Compact, id-tagged list so the model returns scores we can map back.
-  const factList = facts
-    .map(f => `[${f.id}] ${toISODate(f.eventDate)} | ${f.actor || 'Unknown'} | ${f.summary}`)
-    .join('\n')
-    .slice(0, 15000);
+  // Compact, id-tagged lines, then batched so EVERY fact is scored even on
+  // large chronologies (a single request would exceed the context window).
+  const lines = facts.map(
+    f => `[${f.id}] ${toISODate(f.eventDate)} | ${f.actor || 'Unknown'} | ${f.summary}`
+  );
+  const BATCH_CHARS = 12000;
+  const batches: string[][] = [];
+  let cur: string[] = [];
+  let curLen = 0;
+  for (const line of lines) {
+    if (curLen + line.length > BATCH_CHARS && cur.length > 0) {
+      batches.push(cur);
+      cur = [];
+      curLen = 0;
+    }
+    cur.push(line);
+    curLen += line.length + 1;
+  }
+  if (cur.length) batches.push(cur);
 
+  const scores: Scored[] = [];
+  for (let b = 0; b < batches.length; b++) {
+    try {
+      scores.push(...(await scoreBatch(caseContext, batches[b].join('\n'))));
+    } catch (err) {
+      // One failed batch shouldn't lose the rest.
+      console.error(`[Materiality] Batch ${b + 1}/${batches.length} failed:`, err);
+    }
+  }
+
+  const factsById = new Map(facts.map(f => [f.id, f]));
+  let scored = 0;
+  for (const s of scores) {
+    const fact = factsById.get(s.id);
+    if (!fact) continue;
+    const materiality = Math.min(100, Math.max(0, Math.round(s.materiality)));
+    const reason = (s.reason || '').slice(0, 255);
+    await db.updateFactMateriality(s.id, materiality, reason);
+    scored++;
+
+    // Tag the fact with the case's neutral issue labels (closed set only).
+    if (issueLabels.length) {
+      const tags = (Array.isArray(s.issues) ? s.issues : [])
+        .map(t => issueLabels.find(l => l.toLowerCase() === String(t).toLowerCase()))
+        .filter((t): t is string => Boolean(t));
+      await db.updateFactAiIssues(s.id, Array.from(new Set(tags)));
+    }
+
+    // Mirror the rationale into the (user-editable) Comments column when the
+    // TOOL flags the event as key (no user override + above threshold). We only
+    // touch comments that are empty or tool-written, so user notes are safe.
+    const override = (fact as any).isKeyOverride;
+    const aiKey = (override === null || override === undefined) && materiality >= KEY_MATERIALITY_THRESHOLD;
+    const current = fact.comments ?? '';
+    const toolOwned = current === '' || current.startsWith(KEY_COMMENT_PREFIX);
+    if (toolOwned) {
+      const desired = aiKey && reason ? `${KEY_COMMENT_PREFIX}${reason}` : '';
+      if (desired !== current) {
+        await db.updateFactComments(s.id, desired);
+      }
+    }
+  }
+
+  return { scored };
+}
+
+// Score one batch of fact lines against the case context.
+async function scoreBatch(caseContext: string, factList: string): Promise<Scored[]> {
   const response = await invokeLLM({
     messages: [
       {
@@ -108,42 +170,7 @@ Score relative to the case context provided. Return every id exactly once.`,
   });
 
   const content = response?.choices?.[0]?.message?.content;
-  if (!content) throw new Error('No content from materiality LLM call');
+  if (!content) return [];
   const parsed = JSON.parse(typeof content === 'string' ? content : JSON.stringify(content));
-  const scores: Scored[] = parsed.scores || [];
-
-  const factsById = new Map(facts.map(f => [f.id, f]));
-  let scored = 0;
-  for (const s of scores) {
-    const fact = factsById.get(s.id);
-    if (!fact) continue;
-    const materiality = Math.min(100, Math.max(0, Math.round(s.materiality)));
-    const reason = (s.reason || '').slice(0, 255);
-    await db.updateFactMateriality(s.id, materiality, reason);
-    scored++;
-
-    // Tag the fact with the case's neutral issue labels (closed set only).
-    if (issueLabels.length) {
-      const tags = (Array.isArray(s.issues) ? s.issues : [])
-        .map(t => issueLabels.find(l => l.toLowerCase() === String(t).toLowerCase()))
-        .filter((t): t is string => Boolean(t));
-      await db.updateFactAiIssues(s.id, Array.from(new Set(tags)));
-    }
-
-    // Mirror the rationale into the (user-editable) Comments column when the
-    // TOOL flags the event as key (no user override + above threshold). We only
-    // touch comments that are empty or tool-written, so user notes are safe.
-    const override = (fact as any).isKeyOverride;
-    const aiKey = (override === null || override === undefined) && materiality >= KEY_MATERIALITY_THRESHOLD;
-    const current = fact.comments ?? '';
-    const toolOwned = current === '' || current.startsWith(KEY_COMMENT_PREFIX);
-    if (toolOwned) {
-      const desired = aiKey && reason ? `${KEY_COMMENT_PREFIX}${reason}` : '';
-      if (desired !== current) {
-        await db.updateFactComments(s.id, desired);
-      }
-    }
-  }
-
-  return { scored };
+  return parsed.scores || [];
 }
