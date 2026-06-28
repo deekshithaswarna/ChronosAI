@@ -380,37 +380,68 @@ async function processDocumentAsync(documentId: number, s3Url: string, mimeType:
       fileBuffer = Buffer.from(response.data);
     }
 
-    // Extract text using Node.js
-    const extractedData = await extractText(fileBuffer, mimeType);
+    // --- Extract text, with OCR fallbacks for images and unreadable PDFs ---
+    const { ocrPdf, ocrImage, llmConfig, OCR_IMAGE_TYPES } = await import('./_core/llm');
+    const isAnthropic = llmConfig().provider === 'anthropic';
+    const isImage = mimeType.startsWith('image/');
 
-    // Detect scanned / image-only PDFs: pdf-parse reads the embedded text layer
-    // only, so a scan yields ~no text. Flag it clearly instead of silently
-    // completing with zero facts (which would look like an empty document).
-    if (mimeType === 'application/pdf') {
-      const stripped = (extractedData.text || '').replace(/\s+/g, '');
-      const pageCount = extractedData.pages?.length || 1;
-      const looksScanned = stripped.length < 100 || stripped.length / pageCount < 25;
-      if (looksScanned) {
-        const { ocrPdf, llmConfig } = await import('./_core/llm');
-        if (llmConfig().provider === 'anthropic') {
-          // Claude reads scanned PDFs natively — OCR it and feed the pipeline.
-          console.log(`[OCR] Document ${documentId} looks scanned; running Claude OCR fallback`);
-          const ocr = await ocrPdf(fileBuffer);
-          if ((ocr.text || '').replace(/\s+/g, '').length < 50) {
-            await db.updateDocumentStatus(documentId, "failed", "This appears to be a scanned PDF, but OCR could not extract readable text.");
-            return;
-          }
-          extractedData.text = ocr.text;
-          extractedData.pages = ocr.pages;
+    let extractedData: { text: string; pages?: Array<{ pageNumber: number; text: string }> };
+
+    if (isImage) {
+      // Images have no text layer — OCR them with Claude vision.
+      if (!OCR_IMAGE_TYPES.includes(mimeType)) {
+        await db.updateDocumentStatus(documentId, "failed", "Unsupported image type. Please use JPG, PNG, GIF, or WebP.");
+        return;
+      }
+      if (!isAnthropic) {
+        await db.updateDocumentStatus(documentId, "failed", "Image files require the Anthropic/Claude provider for OCR (set LLM_PROVIDER=anthropic).");
+        return;
+      }
+      console.log(`[OCR] Document ${documentId} is an image; running Claude OCR`);
+      extractedData = await ocrImage(fileBuffer, mimeType);
+    } else {
+      try {
+        extractedData = await extractText(fileBuffer, mimeType);
+      } catch (err) {
+        // pdf-parse fails on some PDFs ("Invalid PDF structure"); let Claude read
+        // the raw PDF directly before giving up.
+        if (mimeType === 'application/pdf' && isAnthropic) {
+          console.log(`[OCR] Document ${documentId} failed text extraction (${err instanceof Error ? err.message : err}); running Claude OCR fallback`);
+          extractedData = await ocrPdf(fileBuffer);
         } else {
-          await db.updateDocumentStatus(
-            documentId,
-            "failed",
-            "This looks like a scanned/image-only PDF. OCR fallback requires the Anthropic/Claude provider (set LLM_PROVIDER=anthropic)."
-          );
-          return;
+          throw err;
         }
       }
+
+      // Scanned / image-only PDF: the text layer is ~empty -> OCR it.
+      if (mimeType === 'application/pdf') {
+        const stripped = (extractedData.text || '').replace(/\s+/g, '');
+        const pageCount = extractedData.pages?.length || 1;
+        const looksScanned = stripped.length < 100 || stripped.length / pageCount < 25;
+        if (looksScanned) {
+          if (isAnthropic) {
+            console.log(`[OCR] Document ${documentId} looks scanned; running Claude OCR fallback`);
+            extractedData = await ocrPdf(fileBuffer);
+          } else {
+            await db.updateDocumentStatus(
+              documentId,
+              "failed",
+              "This looks like a scanned/image-only PDF. OCR fallback requires the Anthropic/Claude provider (set LLM_PROVIDER=anthropic)."
+            );
+            return;
+          }
+        }
+      }
+    }
+
+    // After all fallbacks, if there's still essentially no text, fail clearly.
+    if ((extractedData.text || '').replace(/\s+/g, '').length < 30) {
+      await db.updateDocumentStatus(
+        documentId,
+        "failed",
+        "Could not extract readable text from this file (it may be blank, corrupt, or an unsupported format)."
+      );
+      return;
     }
 
     // Extract facts using LLM (returns ExtractionResult with documentTitle and facts)

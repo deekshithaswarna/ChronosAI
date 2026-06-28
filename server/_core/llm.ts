@@ -570,17 +570,18 @@ function splitOcrPages(text: string): Array<{ pageNumber: number; text: string }
   return pages;
 }
 
-/**
- * OCR a (likely scanned) PDF by sending it to Claude as a document block —
- * Claude reads scanned pages natively, so no rasterisation is needed. Requires
- * the Anthropic provider (the OpenAI-compatible endpoints don't take PDF blocks).
- * Returns the transcribed text plus page-level chunks for the fact pipeline.
- */
-export async function ocrPdf(fileBuffer: Buffer): Promise<{ text: string; pages: Array<{ pageNumber: number; text: string }> }> {
+// Anthropic vision media types we accept for image OCR.
+export const OCR_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+
+type OcrResult = { text: string; pages: Array<{ pageNumber: number; text: string }> };
+
+// Shared Claude OCR call: takes the document/image content block and returns
+// the transcribed text + page chunks. Requires the Anthropic provider.
+async function ocrViaClaude(sourceBlock: Record<string, unknown>): Promise<OcrResult> {
   assertApiKey();
   const cfg = llmConfig();
   if (cfg.provider !== "anthropic") {
-    throw new Error("OCR fallback requires the Anthropic/Claude provider (set LLM_PROVIDER=anthropic).");
+    throw new Error("OCR requires the Anthropic/Claude provider (set LLM_PROVIDER=anthropic).");
   }
 
   const body = {
@@ -591,10 +592,7 @@ export async function ocrPdf(fileBuffer: Buffer): Promise<{ text: string; pages:
     messages: [
       {
         role: "user",
-        content: [
-          { type: "document", source: { type: "base64", media_type: "application/pdf", data: fileBuffer.toString("base64") } },
-          { type: "text", text: "Transcribe this document." },
-        ],
+        content: [sourceBlock, { type: "text", text: "Transcribe this document." }],
       },
     ],
   };
@@ -609,4 +607,26 @@ export async function ocrPdf(fileBuffer: Buffer): Promise<{ text: string; pages:
   const blocks: any[] = Array.isArray(json?.content) ? json.content : [];
   const text = blocks.filter(b => b.type === "text").map(b => b.text).join("\n").trim();
   return { text, pages: splitOcrPages(text) };
+}
+
+/**
+ * OCR a (likely scanned or unparseable) PDF by sending it to Claude as a
+ * document block — Claude reads it natively, so no rasterisation is needed.
+ */
+export function ocrPdf(fileBuffer: Buffer): Promise<OcrResult> {
+  return ocrViaClaude({
+    type: "document",
+    source: { type: "base64", media_type: "application/pdf", data: fileBuffer.toString("base64") },
+  });
+}
+
+/**
+ * OCR an image (jpeg/png/gif/webp) by sending it to Claude as an image block.
+ */
+export function ocrImage(fileBuffer: Buffer, mediaType: string): Promise<OcrResult> {
+  const type = OCR_IMAGE_TYPES.includes(mediaType) ? mediaType : "image/png";
+  return ocrViaClaude({
+    type: "image",
+    source: { type: "base64", media_type: type, data: fileBuffer.toString("base64") },
+  });
 }
