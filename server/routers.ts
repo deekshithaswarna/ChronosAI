@@ -229,6 +229,7 @@ export const appRouter = router({
         summary: z.string(),
         parties: z.array(z.string()).optional(),
         issues: z.array(z.string()).optional(),
+        issueLabels: z.array(z.string()).optional(),
         source: z.enum(["ai", "user", "uploaded"]).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
@@ -237,6 +238,7 @@ export const appRouter = router({
           summary: input.summary,
           parties: input.parties,
           issues: input.issues,
+          issueLabels: input.issueLabels,
           source: input.source ?? "user",
         })) ?? null;
       }),

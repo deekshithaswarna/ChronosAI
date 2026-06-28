@@ -26,7 +26,7 @@ function toISODate(d: unknown): string {
   return date.toISOString().split('T')[0];
 }
 
-type Scored = { id: number; materiality: number; reason: string };
+type Scored = { id: number; materiality: number; reason: string; issues?: string[] };
 
 /**
  * Re-evaluate materiality for all of the user's facts against their Case Memory.
@@ -41,11 +41,15 @@ export async function evaluateMateriality(userId: number): Promise<{ scored: num
   const facts = await db.getUserFacts(userId);
   if (!facts || facts.length === 0) return { scored: 0, reason: 'no-facts' };
 
+  const issueLabels = (caseMemory.issueLabels || []).filter(Boolean);
+  const labelSet = new Set(issueLabels.map(l => l.toLowerCase()));
+
   const caseContext = [
     caseMemory.title ? `Case: ${caseMemory.title}` : '',
     caseMemory.summary ? `Summary:\n${caseMemory.summary}` : '',
     caseMemory.parties?.length ? `Parties: ${caseMemory.parties.join(', ')}` : '',
     caseMemory.issues?.length ? `Disputed issues: ${caseMemory.issues.join('; ')}` : '',
+    issueLabels.length ? `Issue labels (the ONLY allowed tags): ${issueLabels.join(' | ')}` : '',
   ]
     .filter(Boolean)
     .join('\n\n');
@@ -65,6 +69,7 @@ A fact is material if it bears on the disputed issues, proves/disproves a claim,
 For each fact id you are given, return:
 - materiality: integer 0-100 (how strongly it bears on THIS case's disputed issues).
 - reason: a concise (max ~15 words) rationale.
+- issues: which issue label(s) from the provided "Issue labels" set this fact bears on. Use the labels EXACTLY as given; pick 0, 1, or more; return [] if none apply or no labels were provided. Do NOT invent new labels.
 Score relative to the case context provided. Return every id exactly once.`,
       },
       {
@@ -88,8 +93,9 @@ Score relative to the case context provided. Return every id exactly once.`,
                   id: { type: 'integer' },
                   materiality: { type: 'integer', minimum: 0, maximum: 100 },
                   reason: { type: 'string' },
+                  issues: { type: 'array', items: { type: 'string' } },
                 },
-                required: ['id', 'materiality', 'reason'],
+                required: ['id', 'materiality', 'reason', 'issues'],
                 additionalProperties: false,
               },
             },
@@ -115,6 +121,14 @@ Score relative to the case context provided. Return every id exactly once.`,
     const reason = (s.reason || '').slice(0, 255);
     await db.updateFactMateriality(s.id, materiality, reason);
     scored++;
+
+    // Tag the fact with the case's neutral issue labels (closed set only).
+    if (issueLabels.length) {
+      const tags = (Array.isArray(s.issues) ? s.issues : [])
+        .map(t => issueLabels.find(l => l.toLowerCase() === String(t).toLowerCase()))
+        .filter((t): t is string => Boolean(t));
+      await db.updateFactAiIssues(s.id, Array.from(new Set(tags)));
+    }
 
     // Mirror the rationale into the (user-editable) Comments column when the
     // TOOL flags the event as key (no user override + above threshold). We only

@@ -174,6 +174,7 @@ export async function getUserFacts(userId: number) {
       fullText: facts.fullText,
       actor: facts.actor,
       issue: facts.issue,
+      aiIssues: facts.aiIssues,
       userIssues: facts.userIssues,
       citation: facts.citation,
       comments: facts.comments,
@@ -268,6 +269,15 @@ export async function updateFactComments(id: number, comments: string) {
 
   await db.update(facts)
     .set({ comments, updatedAt: new Date() })
+    .where(eq(facts.id, id));
+}
+
+export async function updateFactAiIssues(id: number, aiIssues: string[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.update(facts)
+    .set({ aiIssues, updatedAt: new Date() })
     .where(eq(facts.id, id));
 }
 
