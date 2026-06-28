@@ -229,6 +229,7 @@ export const appRouter = router({
         summary: z.string(),
         parties: z.array(z.string()).optional(),
         issues: z.array(z.string()).optional(),
+        issueLabels: z.array(z.string()).optional(),
         source: z.enum(["ai", "user", "uploaded"]).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
@@ -237,6 +238,7 @@ export const appRouter = router({
           summary: input.summary,
           parties: input.parties,
           issues: input.issues,
+          issueLabels: input.issueLabels,
           source: input.source ?? "user",
         })) ?? null;
       }),
@@ -420,10 +422,17 @@ async function processDocumentAsync(documentId: number, s3Url: string, mimeType:
     
     // Save facts to database with new schema
     for (const fact of extractionResult.facts) {
+      // Skip facts whose date the model couldn't normalise — an Invalid Date
+      // would otherwise fail the whole document insert.
+      const eventDate = new Date(fact.date);
+      if (isNaN(eventDate.getTime())) {
+        console.warn(`[Process] Skipping fact with unparseable date "${fact.date}" in document ${documentId}`);
+        continue;
+      }
       await db.createFact({
         documentId,
         userId: document.userId,
-        eventDate: new Date(fact.date),
+        eventDate,
         originalDateText: fact.date + (fact.time ? ` ${fact.time}` : ''),
         summary: fact.event,
         fullText: fact.originalText,

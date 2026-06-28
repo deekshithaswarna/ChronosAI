@@ -1,15 +1,19 @@
 import { eq, and, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
 import { InsertUser, users, documents, facts, actors, issues, InsertDocument, InsertFact, InsertActor, InsertIssue, caseMemory, InsertCaseMemory, dramatisPersonae, InsertDramatisPersona } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
-// Lazily create the drizzle instance so local tooling can run without a DB.
+// Lazily create the drizzle instance over a connection POOL so concurrent
+// requests (and the many sequential writes in materiality/reconcile loops)
+// don't contend on a single connection. Local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      const pool = mysql.createPool({ uri: process.env.DATABASE_URL, connectionLimit: 10 });
+      _db = drizzle(pool);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -174,6 +178,7 @@ export async function getUserFacts(userId: number) {
       fullText: facts.fullText,
       actor: facts.actor,
       issue: facts.issue,
+      aiIssues: facts.aiIssues,
       userIssues: facts.userIssues,
       citation: facts.citation,
       comments: facts.comments,
@@ -268,6 +273,15 @@ export async function updateFactComments(id: number, comments: string) {
 
   await db.update(facts)
     .set({ comments, updatedAt: new Date() })
+    .where(eq(facts.id, id));
+}
+
+export async function updateFactAiIssues(id: number, aiIssues: string[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.update(facts)
+    .set({ aiIssues, updatedAt: new Date() })
     .where(eq(facts.id, id));
 }
 

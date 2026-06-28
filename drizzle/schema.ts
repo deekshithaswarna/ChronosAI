@@ -57,8 +57,9 @@ export const facts = mysqlTable("facts", {
   
   // Categorization
   actor: varchar("actor", { length: 255 }), // Person/entity involved
-  issue: varchar("issue", { length: 255 }), // AI-extracted legal issue category
-  userIssues: json("userIssues").$type<string[]>(), // User-editable issue tags as array
+  issue: varchar("issue", { length: 255 }), // Legacy single AI issue (unused)
+  aiIssues: json("aiIssues").$type<string[]>(), // AI-assigned neutral issue labels (from case memory's set)
+  userIssues: json("userIssues").$type<string[]>(), // User-editable issue tags (override AI when set)
   citation: text("citation"), // Legal citation if present
   comments: text("comments"), // User-editable comments
   
@@ -89,7 +90,8 @@ export const caseMemory = mysqlTable("case_memory", {
   title: text("title"), // short case label
   summary: longtext("summary"), // narrative case summary (editable)
   parties: json("parties").$type<string[]>(), // key parties
-  issues: json("issues").$type<string[]>(), // disputed issues / claims
+  issues: json("issues").$type<string[]>(), // disputed issues / claims (detailed)
+  issueLabels: json("issueLabels").$type<string[]>(), // short, neutral issue labels (the tag set)
   source: mysqlEnum("source", ["ai", "user", "uploaded"]).default("ai").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

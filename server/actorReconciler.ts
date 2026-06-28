@@ -107,11 +107,25 @@ Every input name must appear in exactly one group (a unique name forms a group o
   return map;
 }
 
+// Per-user serialization so concurrent uploads don't run overlapping reconcile
+// passes that read-all-then-rewrite the same actor strings and clobber each other.
+const userLocks = new Map<number, Promise<unknown>>();
+function runExclusive<T>(userId: number, fn: () => Promise<T>): Promise<T> {
+  const prev = (userLocks.get(userId) ?? Promise.resolve()).catch(() => {});
+  const next = prev.then(fn);
+  userLocks.set(userId, next.catch(() => {}));
+  return next;
+}
+
 /**
  * Reconcile actor names across all of a user's facts. Safe to call repeatedly;
- * only writes facts whose actor string actually changes.
+ * only writes facts whose actor string actually changes. Serialized per user.
  */
-export async function reconcileUserActors(userId: number): Promise<void> {
+export function reconcileUserActors(userId: number): Promise<void> {
+  return runExclusive(userId, () => reconcileUserActorsInner(userId));
+}
+
+async function reconcileUserActorsInner(userId: number): Promise<void> {
   try {
     const facts = await db.getUserFacts(userId);
     if (!facts || facts.length === 0) return;

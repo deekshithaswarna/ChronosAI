@@ -22,7 +22,11 @@ async function localPut(
   data: Buffer | Uint8Array | string
 ): Promise<{ key: string; url: string }> {
   const key = normalizeKey(relKey);
-  const dest = path.join(LOCAL_UPLOAD_DIR, key);
+  const dest = path.resolve(LOCAL_UPLOAD_DIR, key);
+  // Defense in depth: never write outside the uploads root.
+  if (dest !== LOCAL_UPLOAD_DIR && !dest.startsWith(LOCAL_UPLOAD_DIR + path.sep)) {
+    throw new Error("Invalid storage key (path traversal blocked)");
+  }
   await fs.mkdir(path.dirname(dest), { recursive: true });
   const buffer =
     typeof data === 'string' ? Buffer.from(data) : Buffer.from(data as Uint8Array);
@@ -65,6 +69,10 @@ async function buildDownloadUrl(
     method: "GET",
     headers: buildAuthHeaders(apiKey),
   });
+  if (!response.ok) {
+    const message = await response.text().catch(() => response.statusText);
+    throw new Error(`Storage download URL failed (${response.status}): ${message}`);
+  }
   return (await response.json()).url;
 }
 
@@ -73,7 +81,13 @@ function ensureTrailingSlash(value: string): string {
 }
 
 function normalizeKey(relKey: string): string {
-  return relKey.replace(/^\/+/, "");
+  // Drop leading slashes, backslashes, and any "." / ".." segments so a
+  // user-supplied filename can't traverse out of the storage root.
+  return relKey
+    .replace(/\\/g, "/")
+    .split("/")
+    .filter(seg => seg && seg !== "." && seg !== "..")
+    .join("/");
 }
 
 function toFormData(

@@ -24,6 +24,7 @@ export default function CaseMemory() {
   const [summary, setSummary] = useState('');
   const [parties, setParties] = useState('');
   const [issues, setIssues] = useState('');
+  const [issueLabels, setIssueLabels] = useState('');
   const [dirty, setDirty] = useState(false);
 
   // Hydrate local state when the query loads (and we're not mid-edit).
@@ -33,6 +34,7 @@ export default function CaseMemory() {
       setSummary(caseQuery.data.summary || '');
       setParties((caseQuery.data.parties || []).join(', '));
       setIssues((caseQuery.data.issues || []).join('\n'));
+      setIssueLabels((caseQuery.data.issueLabels || []).join(', '));
     }
   }, [caseQuery.data, dirty]);
 
@@ -61,6 +63,7 @@ export default function CaseMemory() {
         summary,
         parties: parties.split(',').map(p => p.trim()).filter(Boolean),
         issues: issues.split('\n').map(i => i.trim()).filter(Boolean),
+        issueLabels: issueLabels.split(',').map(i => i.trim()).filter(Boolean),
         source: 'user',
       });
       setDirty(false);
@@ -177,6 +180,24 @@ export default function CaseMemory() {
               placeholder={'Liability for flight delay\nEntitlement to compensation under UK261\nWhether extraordinary circumstances apply'}
               className="min-h-[120px] text-sm"
             />
+          </div>
+
+          {/* Issue labels (the neutral tags used to label events in the chronology) */}
+          <div>
+            <label className="text-sm font-semibold heading block mb-2">Issue labels <span className="font-normal text-muted-foreground">(short &amp; neutral, comma-separated — used to tag events in the chronology)</span></label>
+            <Input
+              value={issueLabels}
+              onChange={e => { setIssueLabels(e.target.value); markDirty(); }}
+              placeholder="Redundancy, Bullying/harassment claim, Breach of trust claim"
+            />
+            <div className="flex flex-wrap gap-1 mt-2">
+              {issueLabels.split(',').map(p => p.trim()).filter(Boolean).map((p, i) => (
+                <Badge key={i} variant="secondary" className="text-xs">{p}</Badge>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              After editing these, click <span className="font-medium">Re-evaluate key facts</span> to retag the chronology.
+            </p>
           </div>
 
           <div className="pt-2 border-t border-foreground/10">

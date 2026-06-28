@@ -1,6 +1,5 @@
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Users, Sparkles, Loader2, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -77,8 +76,8 @@ export default function DramatisPersonae() {
                   <td className="py-4 px-4 align-top" style={{ fontSize: '14px' }}>
                     <span className="font-semibold">{person.name}</span>
                   </td>
-                  <td className="py-4 px-4 align-top" style={{ fontSize: '14px' }}>
-                    {person.role ? <Badge variant="secondary" className="text-xs">{person.role}</Badge> : <span className="text-muted-foreground">—</span>}
+                  <td className="py-4 px-4 align-top" style={{ fontSize: '14px', wordWrap: 'break-word', overflowWrap: 'break-word' }}>
+                    {person.role ? <span>{person.role}</span> : <span className="text-muted-foreground">—</span>}
                   </td>
                   <td className="py-4 px-4 align-top" style={{ fontSize: '14px', wordWrap: 'break-word' }}>
                     <p className="leading-relaxed">{person.narrative || '—'}</p>

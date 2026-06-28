@@ -39,10 +39,20 @@ export async function generateDramatisPersonae(userId: number) {
     caseMemory?.summary ? `Summary:\n${caseMemory.summary}` : '',
   ].filter(Boolean).join('\n\n');
 
-  const candidates = [...byName.entries()]
-    .map(([name, summaries]) => `### ${name}\n${summaries.map(s => `- ${s}`).join('\n')}`)
-    .join('\n\n')
-    .slice(0, 18000);
+  // Build candidate blocks within a char budget WITHOUT ever dropping a name:
+  // every distinct actor's header is always included; per-actor event context is
+  // trimmed (and reduced further) if needed so no genuine party is lost.
+  const BUDGET = 18000;
+  const entries = [...byName.entries()];
+  let perActor = 6;
+  const blockFor = (name: string, summaries: string[]) =>
+    `### ${name}\n${summaries.slice(0, perActor).map(s => `- ${s.slice(0, 200)}`).join('\n')}`;
+  while (perActor > 0 && entries.reduce((n, [nm, s]) => n + blockFor(nm, s).length + 2, 0) > BUDGET) {
+    perActor--;
+  }
+  const candidates = entries.map(([name, summaries]) =>
+    perActor > 0 ? blockFor(name, summaries) : `### ${name}`
+  ).join('\n\n');
 
   const response = await invokeLLM({
     messages: [
@@ -92,7 +102,12 @@ Omit pure non-actors (e.g. a flight number, a generic placeholder like "Unknown"
 
   const content = response?.choices?.[0]?.message?.content;
   if (!content) throw new Error('No content from dramatis-personae LLM call');
-  const parsed = JSON.parse(typeof content === 'string' ? content : JSON.stringify(content));
+  let parsed: any;
+  try {
+    parsed = JSON.parse(typeof content === 'string' ? content : JSON.stringify(content));
+  } catch {
+    throw new Error('Dramatis personae returned invalid JSON (possibly truncated, or the provider ignored the response schema).');
+  }
   const people = (parsed.people || []).filter((p: any) => p && p.name);
 
   await db.replaceDramatisPersonae(userId, people.map((p: any) => ({

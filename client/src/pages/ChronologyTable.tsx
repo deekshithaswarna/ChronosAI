@@ -23,6 +23,15 @@ function isKeyFact(fact: any): boolean {
   return (fact.materiality ?? -1) >= KEY_MATERIALITY_THRESHOLD;
 }
 
+// Effective issue tags for a fact: a user's edits override the AI tags entirely
+// (once they've touched the list); otherwise show the AI-assigned issue labels.
+function effectiveIssues(fact: any): string[] {
+  if (Array.isArray(fact.userIssues)) return fact.userIssues;
+  if (Array.isArray(fact.aiIssues)) return fact.aiIssues;
+  if (fact.issue) return [fact.issue];
+  return [];
+}
+
 export default function ChronologyTable() {
   const [, navigate] = useLocation();
   const { data: facts, isLoading } = trpc.facts.list.useQuery();
@@ -167,10 +176,7 @@ export default function ChronologyTable() {
     if (!facts) return [];
     const issues = new Set<string>();
     facts.forEach(fact => {
-      if (fact.issue) issues.add(fact.issue);
-      if (fact.userIssues && Array.isArray(fact.userIssues)) {
-        fact.userIssues.forEach(issue => issues.add(issue));
-      }
+      effectiveIssues(fact).forEach(issue => issues.add(issue));
     });
     return Array.from(issues).sort();
   }, [facts]);
@@ -214,13 +220,9 @@ export default function ChronologyTable() {
       });
     }
     if (selectedIssues.length > 0) {
-      filtered = filtered.filter(f => {
-        if (f.issue && selectedIssues.includes(f.issue)) return true;
-        if (f.userIssues && Array.isArray(f.userIssues)) {
-          return f.userIssues.some(issue => selectedIssues.includes(issue));
-        }
-        return false;
-      });
+      filtered = filtered.filter(f =>
+        effectiveIssues(f).some(issue => selectedIssues.includes(issue))
+      );
     }
     if (selectedSources.length > 0) {
       filtered = filtered.filter(f => {
@@ -239,9 +241,8 @@ export default function ChronologyTable() {
         if (f.documentName && f.documentName.toLowerCase().includes(searchLower)) return true;
         // Search in Actors
         if (f.actor && f.actor.toLowerCase().includes(searchLower)) return true;
-        // Search in Issues
-        if (f.issue && f.issue.toLowerCase().includes(searchLower)) return true;
-        if (f.userIssues && f.userIssues.some(issue => issue.toLowerCase().includes(searchLower))) return true;
+        // Search in Issues (effective: user override or AI labels)
+        if (effectiveIssues(f).some(issue => issue.toLowerCase().includes(searchLower))) return true;
         // Search in Comments
         if (f.comments && f.comments.toLowerCase().includes(searchLower)) return true;
         return false;
@@ -413,6 +414,9 @@ export default function ChronologyTable() {
         id: factId,
         comments: newValue,
       });
+      // Drop the local cache so a later server rewrite (e.g. re-evaluate's
+      // "Key fact —" comment) isn't masked by the stale edited value.
+      setEditedComments(prev => { const n = { ...prev }; delete n[factId]; return n; });
       utils.facts.list.invalidate();
     }
   };
@@ -423,14 +427,7 @@ export default function ChronologyTable() {
       // editedIssues now stores arrays
       return Array.isArray(editedIssues[fact.id]) ? editedIssues[fact.id] : [];
     }
-    // Return userIssues array or convert issue to array
-    if (fact.userIssues && Array.isArray(fact.userIssues)) {
-      return fact.userIssues;
-    }
-    if (fact.issue) {
-      return [fact.issue];
-    }
-    return [];
+    return effectiveIssues(fact);
   };
 
   // Get current value for Comments (edited or original)
@@ -522,6 +519,7 @@ export default function ChronologyTable() {
         id: factId,
         summary: newValue,
       });
+      setEditedDescriptions(prev => { const n = { ...prev }; delete n[factId]; return n; });
       utils.facts.list.invalidate();
       setEditingDescriptionId(null);
     }
@@ -567,8 +565,10 @@ export default function ChronologyTable() {
     if (editedDates[fact.id] !== undefined) {
       return editedDates[fact.id];
     }
-    // Format as YYYY-MM-DD for input[type="date"]
-    return new Date(fact.eventDate).toISOString().split('T')[0];
+    // Format as YYYY-MM-DD for input[type="date"]; guard invalid dates so the
+    // date editor can't crash the row with a RangeError.
+    const d = new Date(fact.eventDate);
+    return isNaN(d.getTime()) ? '' : d.toISOString().split('T')[0];
   };
 
   // Handle Date field change
@@ -581,13 +581,18 @@ export default function ChronologyTable() {
     saveToHistory(); // Save BEFORE making changes
     const newDateValue = editedDates[factId];
     if (newDateValue !== undefined) {
+      // Ignore empty/partial/invalid dates instead of throwing on toISOString().
+      const newDate = new Date(newDateValue);
+      if (isNaN(newDate.getTime())) {
+        setEditingDateId(null);
+        return;
+      }
       try {
-        // Convert YYYY-MM-DD to Date object
-        const newDate = new Date(newDateValue);
         await updateFactMutation.mutateAsync({
           id: factId,
           eventDate: newDate.toISOString(),
         });
+        setEditedDates(prev => { const n = { ...prev }; delete n[factId]; return n; });
         // Invalidate to trigger re-fetch and auto-sort
         utils.facts.list.invalidate();
         setEditingDateId(null);
