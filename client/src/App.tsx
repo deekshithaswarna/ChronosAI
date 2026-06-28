@@ -67,7 +67,7 @@ function Router() {
                   : "text-foreground hover:text-[#E07A5F]"
               }`}
             >
-              Dramatis Personae
+              View Dramatis Personae
             </Link>
             </div>
           </div>

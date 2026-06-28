@@ -25,6 +25,10 @@ export function FileUpload({ onUploadComplete }: { onUploadComplete?: () => void
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/msword',
       'text/plain',
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp',
     ];
 
     for (const file of acceptedFiles) {
@@ -90,6 +94,10 @@ export function FileUpload({ onUploadComplete }: { onUploadComplete?: () => void
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
       'application/msword': ['.doc'],
       'text/plain': ['.txt'],
+      'image/jpeg': ['.jpg', '.jpeg'],
+      'image/png': ['.png'],
+      'image/gif': ['.gif'],
+      'image/webp': ['.webp'],
     },
     multiple: true,
   });
@@ -113,7 +121,7 @@ export function FileUpload({ onUploadComplete }: { onUploadComplete?: () => void
             Upload Documents
           </Button>
           <div className="text-xs text-muted-foreground">
-            Supports PDF, Word (.docx, .doc), and Text files (max 50MB)
+            Supports PDF, Word (.docx, .doc), Text, and Images (JPG, PNG, GIF, WebP) — max 50MB
           </div>
         </div>
       </Card>

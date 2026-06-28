@@ -96,9 +96,11 @@ export const appRouter = router({
       .input(z.object({ id: z.number() }))
       .mutation(async ({ ctx, input }) => {
         await db.deleteDocument(input.id, ctx.user.id);
+        // Rebuild (or clear) derived case data so it reflects the new doc set.
+        scheduleCaseRefresh(ctx.user.id);
         return { success: true };
       }),
-    
+
     // Update document title
     updateTitle: protectedProcedure
       .input(z.object({ 
@@ -380,37 +382,100 @@ async function processDocumentAsync(documentId: number, s3Url: string, mimeType:
       fileBuffer = Buffer.from(response.data);
     }
 
-    // Extract text using Node.js
-    const extractedData = await extractText(fileBuffer, mimeType);
+    // --- Extract text, with OCR fallbacks for images and unreadable PDFs ---
+    const { ocrPdf, ocrImage, llmConfig, OCR_IMAGE_TYPES } = await import('./_core/llm');
+    const isAnthropic = llmConfig().provider === 'anthropic';
+    const isImage = mimeType.startsWith('image/');
 
-    // Detect scanned / image-only PDFs: pdf-parse reads the embedded text layer
-    // only, so a scan yields ~no text. Flag it clearly instead of silently
-    // completing with zero facts (which would look like an empty document).
-    if (mimeType === 'application/pdf') {
-      const stripped = (extractedData.text || '').replace(/\s+/g, '');
-      const pageCount = extractedData.pages?.length || 1;
-      const looksScanned = stripped.length < 100 || stripped.length / pageCount < 25;
-      if (looksScanned) {
-        const { ocrPdf, llmConfig } = await import('./_core/llm');
-        if (llmConfig().provider === 'anthropic') {
-          // Claude reads scanned PDFs natively — OCR it and feed the pipeline.
-          console.log(`[OCR] Document ${documentId} looks scanned; running Claude OCR fallback`);
-          const ocr = await ocrPdf(fileBuffer);
-          if ((ocr.text || '').replace(/\s+/g, '').length < 50) {
-            await db.updateDocumentStatus(documentId, "failed", "This appears to be a scanned PDF, but OCR could not extract readable text.");
-            return;
-          }
-          extractedData.text = ocr.text;
-          extractedData.pages = ocr.pages;
+    let extractedData: { text: string; pages?: Array<{ pageNumber: number; text: string }> };
+
+    // Turn raw OCR/provider errors (e.g. Claude's "not a valid PDF" 400) into a
+    // clear, actionable failure message instead of leaking the API error.
+    const friendlyOcrError = (e: unknown): string => {
+      const s = e instanceof Error ? e.message : String(e);
+      if (/not valid|invalid_request|invalid pdf|400 Bad Request/i.test(s)) {
+        return "This file could not be read — it may be corrupt, password-protected, or not a genuine PDF/image. Try re-exporting or re-scanning it.";
+      }
+      return `Could not read this file: ${s}`;
+    };
+    // Run an OCR call; on failure mark the doc failed and return null.
+    const runOcr = async (fn: () => Promise<typeof extractedData>) => {
+      try {
+        return await fn();
+      } catch (e) {
+        console.error(`[OCR] Document ${documentId} OCR failed:`, e);
+        await db.updateDocumentStatus(documentId, "failed", friendlyOcrError(e));
+        return null;
+      }
+    };
+
+    // A real PDF starts with "%PDF"; reject mislabeled/corrupt files up front.
+    if (mimeType === 'application/pdf' && !fileBuffer.subarray(0, 5).toString('latin1').startsWith('%PDF')) {
+      await db.updateDocumentStatus(documentId, "failed", "This file isn't a valid PDF (it may be corrupt or mislabeled). Please re-export or re-scan it.");
+      return;
+    }
+
+    if (isImage) {
+      // Images have no text layer — OCR them with Claude vision.
+      if (!OCR_IMAGE_TYPES.includes(mimeType)) {
+        await db.updateDocumentStatus(documentId, "failed", "Unsupported image type. Please use JPG, PNG, GIF, or WebP.");
+        return;
+      }
+      if (!isAnthropic) {
+        await db.updateDocumentStatus(documentId, "failed", "Image files require the Anthropic/Claude provider for OCR (set LLM_PROVIDER=anthropic).");
+        return;
+      }
+      console.log(`[OCR] Document ${documentId} is an image; running Claude OCR`);
+      const r = await runOcr(() => ocrImage(fileBuffer, mimeType));
+      if (!r) return;
+      extractedData = r;
+    } else {
+      try {
+        extractedData = await extractText(fileBuffer, mimeType);
+      } catch (err) {
+        // pdf-parse fails on some PDFs ("Invalid PDF structure"); let Claude read
+        // the raw PDF directly before giving up.
+        if (mimeType === 'application/pdf' && isAnthropic) {
+          console.log(`[OCR] Document ${documentId} failed text extraction (${err instanceof Error ? err.message : err}); running Claude OCR fallback`);
+          const r = await runOcr(() => ocrPdf(fileBuffer));
+          if (!r) return;
+          extractedData = r;
         } else {
-          await db.updateDocumentStatus(
-            documentId,
-            "failed",
-            "This looks like a scanned/image-only PDF. OCR fallback requires the Anthropic/Claude provider (set LLM_PROVIDER=anthropic)."
-          );
-          return;
+          throw err;
         }
       }
+
+      // Scanned / image-only PDF: the text layer is ~empty -> OCR it.
+      if (mimeType === 'application/pdf') {
+        const stripped = (extractedData.text || '').replace(/\s+/g, '');
+        const pageCount = extractedData.pages?.length || 1;
+        const looksScanned = stripped.length < 100 || stripped.length / pageCount < 25;
+        if (looksScanned) {
+          if (isAnthropic) {
+            console.log(`[OCR] Document ${documentId} looks scanned; running Claude OCR fallback`);
+            const r = await runOcr(() => ocrPdf(fileBuffer));
+            if (!r) return;
+            extractedData = r;
+          } else {
+            await db.updateDocumentStatus(
+              documentId,
+              "failed",
+              "This looks like a scanned/image-only PDF. OCR fallback requires the Anthropic/Claude provider (set LLM_PROVIDER=anthropic)."
+            );
+            return;
+          }
+        }
+      }
+    }
+
+    // After all fallbacks, if there's still essentially no text, fail clearly.
+    if ((extractedData.text || '').replace(/\s+/g, '').length < 30) {
+      await db.updateDocumentStatus(
+        documentId,
+        "failed",
+        "Could not extract readable text from this file (it may be blank, corrupt, or an unsupported format)."
+      );
+      return;
     }
 
     // Extract facts using LLM (returns ExtractionResult with documentTitle and facts)
@@ -448,14 +513,48 @@ async function processDocumentAsync(documentId: number, s3Url: string, mimeType:
     await db.updateDocumentWithTitle(documentId, extractionResult.documentTitle, extractedData.text);
     await db.updateDocumentStatus(documentId, "completed");
 
-    // Reconcile actor names across all of this user's facts so the same person
-    // written different ways (e.g. "Priya" / "Priya Sharma" / "Sharma, Priya")
-    // collapses to one canonical name. Best-effort; never fails the upload.
-    await reconcileUserActors(document.userId);
+    // Rebuild derived case data (actor reconciliation + case summary + dramatis
+    // personae) once the document set settles. Debounced so a multi-file upload
+    // triggers one rebuild. Key-fact materiality stays an explicit user action.
+    scheduleCaseRefresh(document.userId);
 
   } catch (error) {
     console.error(`Document processing failed for ${documentId}:`, error);
     await db.updateDocumentStatus(documentId, "failed", String(error));
   }
+}
+
+// Debounced per-user rebuild of derived case data after documents change, so
+// the case memory / chronology actors / dramatis personae always reflect the
+// CURRENT document set (and a new case doesn't show a previous case's data).
+const caseRefreshTimers = new Map<number, ReturnType<typeof setTimeout>>();
+function scheduleCaseRefresh(userId: number) {
+  const existing = caseRefreshTimers.get(userId);
+  if (existing) clearTimeout(existing);
+  caseRefreshTimers.set(userId, setTimeout(() => {
+    caseRefreshTimers.delete(userId);
+    refreshCaseData(userId).catch(err => console.error('[CaseRefresh] failed:', err));
+  }, 4000));
+}
+
+async function refreshCaseData(userId: number) {
+  await reconcileUserActors(userId);
+  const facts = await db.getUserFacts(userId);
+  if (!facts || facts.length === 0) {
+    // No documents/facts left — clear stale derived data for a fresh slate.
+    await db.clearCaseMemory(userId);
+    await db.replaceDramatisPersonae(userId, []);
+    return;
+  }
+  // Preserve a user-edited/uploaded case summary (it's their theory of the
+  // case). Only (re)generate when the summary is AI-owned or doesn't exist yet.
+  // A brand-new case starts clean because deleting all docs clears the memory.
+  const existing = await db.getCaseMemory(userId);
+  const userOwned = existing && (existing.source === 'user' || existing.source === 'uploaded');
+  if (!userOwned) {
+    await generateCaseSummary(userId);
+  }
+  // Dramatis personae has no manual-edit surface, so always keep it in sync.
+  await generateDramatisPersonae(userId);
 }
 

@@ -328,6 +328,12 @@ export async function getCaseMemory(userId: number) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function clearCaseMemory(userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(caseMemory).where(eq(caseMemory.userId, userId));
+}
+
 export async function upsertCaseMemory(userId: number, data: Partial<Omit<InsertCaseMemory, "userId">>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");

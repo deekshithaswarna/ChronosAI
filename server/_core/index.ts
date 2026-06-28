@@ -31,9 +31,10 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   const server = createServer(app);
-  // Configure body parser with larger size limit for file uploads
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  // Body parser limit must exceed the 50MB file cap AFTER base64 inflation
+  // (~33%), or large uploads get truncated and arrive as corrupt files.
+  app.use(express.json({ limit: "80mb" }));
+  app.use(express.urlencoded({ limit: "80mb", extended: true }));
   // Serve locally-stored uploads (used when the Forge storage proxy is absent)
   app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
   // OAuth callback under /api/oauth/callback
