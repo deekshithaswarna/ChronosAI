@@ -1336,11 +1336,17 @@ export default function ChronologyTable() {
                   <td className="py-4 px-4 align-top" style={{ fontSize: '14px', wordWrap: 'break-word', overflowWrap: 'break-word' }}>
                     <Textarea
                       value={getCommentValue(fact)}
-                      onChange={(e) => handleCommentChange(fact.id, e.target.value)}
+                      // Auto-grow to fit the comment so longer text isn't clipped.
+                      ref={(el) => { if (el) { el.style.height = 'auto'; el.style.height = `${el.scrollHeight}px`; } }}
+                      onChange={(e) => {
+                        handleCommentChange(fact.id, e.target.value);
+                        e.target.style.height = 'auto';
+                        e.target.style.height = `${e.target.scrollHeight}px`;
+                      }}
                       onBlur={() => handleCommentSave(fact.id)}
                       placeholder="Add comments..."
-                      className="min-h-[60px] w-full text-sm resize-none bg-transparent p-2"
-                      style={{ height: 'auto', minHeight: '60px', border: 'none', outline: 'none', boxShadow: 'none' }}
+                      className="min-h-[60px] w-full text-sm resize-none bg-transparent p-2 overflow-hidden"
+                      style={{ minHeight: '60px', border: 'none', outline: 'none', boxShadow: 'none' }}
                     />
                   </td>
                 </tr>
