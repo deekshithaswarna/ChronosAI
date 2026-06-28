@@ -542,3 +542,65 @@ function retryDelayFromError(errorText: string): number | null {
   // Add a small buffer so we don't race the quota window edge.
   return Math.ceil(parseFloat(match[1]) * 1000) + 1000;
 }
+
+// --- OCR fallback for scanned PDFs (Anthropic/Claude only) -------------------
+
+// Split OCR output into pages on the "[PAGE n]" markers we ask the model to emit.
+function splitOcrPages(text: string): Array<{ pageNumber: number; text: string }> {
+  const marks: Array<{ page: number; index: number }> = [];
+  const regex = /\[PAGE\s+(\d+)\]/gi;
+  let m: RegExpExecArray | null;
+  while ((m = regex.exec(text)) !== null) {
+    marks.push({ page: parseInt(m[1], 10), index: m.index });
+  }
+  if (marks.length === 0) return [{ pageNumber: 1, text: text.trim() }];
+
+  const pages: Array<{ pageNumber: number; text: string }> = [];
+  for (let i = 0; i < marks.length; i++) {
+    const start = text.indexOf("]", marks[i].index) + 1;
+    const end = i + 1 < marks.length ? marks[i + 1].index : text.length;
+    pages.push({ pageNumber: marks[i].page, text: text.slice(start, end).trim() });
+  }
+  return pages;
+}
+
+/**
+ * OCR a (likely scanned) PDF by sending it to Claude as a document block —
+ * Claude reads scanned pages natively, so no rasterisation is needed. Requires
+ * the Anthropic provider (the OpenAI-compatible endpoints don't take PDF blocks).
+ * Returns the transcribed text plus page-level chunks for the fact pipeline.
+ */
+export async function ocrPdf(fileBuffer: Buffer): Promise<{ text: string; pages: Array<{ pageNumber: number; text: string }> }> {
+  assertApiKey();
+  const cfg = llmConfig();
+  if (cfg.provider !== "anthropic") {
+    throw new Error("OCR fallback requires the Anthropic/Claude provider (set LLM_PROVIDER=anthropic).");
+  }
+
+  const body = {
+    model: cfg.model,
+    max_tokens: Number(process.env.LLM_OCR_MAX_TOKENS ?? 16000),
+    system:
+      'You are an OCR engine for legal documents. Transcribe ALL text from the document verbatim in natural reading order. Begin each page with a line containing exactly "[PAGE n]" (n = the page number). Do not summarise, interpret, omit, or add commentary — output only the transcribed text.',
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "document", source: { type: "base64", media_type: "application/pdf", data: fileBuffer.toString("base64") } },
+          { type: "text", text: "Transcribe this document." },
+        ],
+      },
+    ],
+  };
+
+  await throttle();
+  const json = await fetchWithRetry(
+    anthropicUrl(cfg.baseUrl),
+    { "content-type": "application/json", "x-api-key": cfg.apiKey, "anthropic-version": "2023-06-01" },
+    body
+  );
+
+  const blocks: any[] = Array.isArray(json?.content) ? json.content : [];
+  const text = blocks.filter(b => b.type === "text").map(b => b.text).join("\n").trim();
+  return { text, pages: splitOcrPages(text) };
+}

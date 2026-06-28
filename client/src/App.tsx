@@ -7,6 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import CaseMemory from "./pages/CaseMemory";
 import ChronologyTable from "./pages/ChronologyTable";
+import DramatisPersonae from "./pages/DramatisPersonae";
 import NotFound from "./pages/NotFound";
 
 function Router() {
@@ -58,6 +59,16 @@ function Router() {
             >
               View Chronology
             </Link>
+            <Link
+              href="/dramatis-personae"
+              className={`text-base font-medium transition-colors ${
+                location === "/dramatis-personae"
+                  ? "font-bold border-b-2 border-foreground pb-1"
+                  : "text-foreground hover:text-[#E07A5F]"
+              }`}
+            >
+              Dramatis Personae
+            </Link>
             </div>
           </div>
         </div>
@@ -69,6 +80,7 @@ function Router() {
           <Route path="/" component={Home} />
           <Route path="/case-memory" component={CaseMemory} />
           <Route path="/chronology" component={ChronologyTable} />
+          <Route path="/dramatis-personae" component={DramatisPersonae} />
           <Route path="/404" component={NotFound} />
           <Route component={NotFound} />
         </Switch>

@@ -15,6 +15,11 @@ import * as db from './db';
 // unless the user has set an explicit override.
 export const KEY_MATERIALITY_THRESHOLD = 70;
 
+// Prefix marking a Comments value as auto-written by the tool. We only ever
+// overwrite/clear comments that are empty or carry this prefix, so user-typed
+// comments are never touched.
+export const KEY_COMMENT_PREFIX = 'Key fact — ';
+
 function toISODate(d: unknown): string {
   const date = d instanceof Date ? d : new Date(d as string);
   if (isNaN(date.getTime())) return 'unknown date';
@@ -101,13 +106,29 @@ Score relative to the case context provided. Return every id exactly once.`,
   const parsed = JSON.parse(typeof content === 'string' ? content : JSON.stringify(content));
   const scores: Scored[] = parsed.scores || [];
 
-  const validIds = new Set(facts.map(f => f.id));
+  const factsById = new Map(facts.map(f => [f.id, f]));
   let scored = 0;
   for (const s of scores) {
-    if (!validIds.has(s.id)) continue;
+    const fact = factsById.get(s.id);
+    if (!fact) continue;
     const materiality = Math.min(100, Math.max(0, Math.round(s.materiality)));
-    await db.updateFactMateriality(s.id, materiality, (s.reason || '').slice(0, 255));
+    const reason = (s.reason || '').slice(0, 255);
+    await db.updateFactMateriality(s.id, materiality, reason);
     scored++;
+
+    // Mirror the rationale into the (user-editable) Comments column when the
+    // TOOL flags the event as key (no user override + above threshold). We only
+    // touch comments that are empty or tool-written, so user notes are safe.
+    const override = (fact as any).isKeyOverride;
+    const aiKey = (override === null || override === undefined) && materiality >= KEY_MATERIALITY_THRESHOLD;
+    const current = fact.comments ?? '';
+    const toolOwned = current === '' || current.startsWith(KEY_COMMENT_PREFIX);
+    if (toolOwned) {
+      const desired = aiKey && reason ? `${KEY_COMMENT_PREFIX}${reason}` : '';
+      if (desired !== current) {
+        await db.updateFactComments(s.id, desired);
+      }
+    }
   }
 
   return { scored };

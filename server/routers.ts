@@ -7,6 +7,7 @@ import { reconcileUserActors } from './actorReconciler';
 import { extractFactsFromText } from './factExtractor';
 import { generateCaseSummary } from './caseSummary';
 import { evaluateMateriality } from './materiality';
+import { generateDramatisPersonae } from './dramatisPersonae';
 import { z } from "zod";
 import * as db from "./db";
 import { storagePut } from "./storage";
@@ -240,6 +241,62 @@ export const appRouter = router({
         })) ?? null;
       }),
   }),
+
+  dramatisPersonae: router({
+    // Cast of parties, each with the documents/pages that reference them
+    // (references are derived live from facts so they stay current).
+    get: protectedProcedure.query(async ({ ctx }) => {
+      const [people, facts] = await Promise.all([
+        db.getDramatisPersonae(ctx.user.id),
+        db.getUserFacts(ctx.user.id),
+      ]);
+
+      const norm = (s: string) => s.trim().toLowerCase();
+
+      return people.map(person => {
+        // Find documents + page numbers where this person is an actor.
+        const byDoc = new Map<number, { documentId: number; documentTitle: string | null; documentName: string | null; documentUrl: string | null; pages: Set<number> }>();
+        for (const f of facts) {
+          if (!f.actor) continue;
+          const names = f.actor.split(/[,;]/).map(a => norm(a));
+          if (!names.includes(norm(person.name))) continue;
+          const docId = f.documentId;
+          if (!byDoc.has(docId)) {
+            byDoc.set(docId, {
+              documentId: docId,
+              documentTitle: f.documentTitle ?? null,
+              documentName: f.documentName ?? null,
+              documentUrl: f.documentUrl ?? null,
+              pages: new Set<number>(),
+            });
+          }
+          if (f.pageNumber) byDoc.get(docId)!.pages.add(f.pageNumber);
+        }
+
+        const references = [...byDoc.values()].map(r => ({
+          documentId: r.documentId,
+          documentTitle: r.documentTitle,
+          documentName: r.documentName,
+          documentUrl: r.documentUrl,
+          pages: [...r.pages].sort((a, b) => a - b),
+        }));
+
+        return {
+          id: person.id,
+          name: person.name,
+          role: person.role,
+          narrative: person.narrative,
+          references,
+        };
+      });
+    }),
+
+    // (Re)generate the cast from the user's facts via the LLM.
+    generate: protectedProcedure.mutation(async ({ ctx }) => {
+      await generateDramatisPersonae(ctx.user.id);
+      return { success: true };
+    }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;
@@ -323,7 +380,37 @@ async function processDocumentAsync(documentId: number, s3Url: string, mimeType:
 
     // Extract text using Node.js
     const extractedData = await extractText(fileBuffer, mimeType);
-    
+
+    // Detect scanned / image-only PDFs: pdf-parse reads the embedded text layer
+    // only, so a scan yields ~no text. Flag it clearly instead of silently
+    // completing with zero facts (which would look like an empty document).
+    if (mimeType === 'application/pdf') {
+      const stripped = (extractedData.text || '').replace(/\s+/g, '');
+      const pageCount = extractedData.pages?.length || 1;
+      const looksScanned = stripped.length < 100 || stripped.length / pageCount < 25;
+      if (looksScanned) {
+        const { ocrPdf, llmConfig } = await import('./_core/llm');
+        if (llmConfig().provider === 'anthropic') {
+          // Claude reads scanned PDFs natively — OCR it and feed the pipeline.
+          console.log(`[OCR] Document ${documentId} looks scanned; running Claude OCR fallback`);
+          const ocr = await ocrPdf(fileBuffer);
+          if ((ocr.text || '').replace(/\s+/g, '').length < 50) {
+            await db.updateDocumentStatus(documentId, "failed", "This appears to be a scanned PDF, but OCR could not extract readable text.");
+            return;
+          }
+          extractedData.text = ocr.text;
+          extractedData.pages = ocr.pages;
+        } else {
+          await db.updateDocumentStatus(
+            documentId,
+            "failed",
+            "This looks like a scanned/image-only PDF. OCR fallback requires the Anthropic/Claude provider (set LLM_PROVIDER=anthropic)."
+          );
+          return;
+        }
+      }
+    }
+
     // Extract facts using LLM (returns ExtractionResult with documentTitle and facts)
     const extractionResult = await extractFactsFromText(extractedData.text, extractedData.pages, filename);
     

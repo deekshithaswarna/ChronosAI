@@ -99,6 +99,25 @@ export type CaseMemory = typeof caseMemory.$inferSelect;
 export type InsertCaseMemory = typeof caseMemory.$inferInsert;
 
 /**
+ * Dramatis personae: the AI-generated cast of parties for a case. Roles and
+ * narratives are stored; the document references are derived from facts at read
+ * time so they stay in sync with the chronology.
+ */
+export const dramatisPersonae = mysqlTable("dramatis_personae", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  role: text("role"),
+  narrative: text("narrative"),
+  sortOrder: int("sortOrder").default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type DramatisPersona = typeof dramatisPersonae.$inferSelect;
+export type InsertDramatisPersona = typeof dramatisPersonae.$inferInsert;
+
+/**
  * Actor categories for filtering
  */
 export const actors = mysqlTable("actors", {
