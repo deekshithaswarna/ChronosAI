@@ -96,9 +96,11 @@ export const appRouter = router({
       .input(z.object({ id: z.number() }))
       .mutation(async ({ ctx, input }) => {
         await db.deleteDocument(input.id, ctx.user.id);
+        // Rebuild (or clear) derived case data so it reflects the new doc set.
+        scheduleCaseRefresh(ctx.user.id);
         return { success: true };
       }),
-    
+
     // Update document title
     updateTitle: protectedProcedure
       .input(z.object({ 
@@ -387,6 +389,32 @@ async function processDocumentAsync(documentId: number, s3Url: string, mimeType:
 
     let extractedData: { text: string; pages?: Array<{ pageNumber: number; text: string }> };
 
+    // Turn raw OCR/provider errors (e.g. Claude's "not a valid PDF" 400) into a
+    // clear, actionable failure message instead of leaking the API error.
+    const friendlyOcrError = (e: unknown): string => {
+      const s = e instanceof Error ? e.message : String(e);
+      if (/not valid|invalid_request|invalid pdf|400 Bad Request/i.test(s)) {
+        return "This file could not be read — it may be corrupt, password-protected, or not a genuine PDF/image. Try re-exporting or re-scanning it.";
+      }
+      return `Could not read this file: ${s}`;
+    };
+    // Run an OCR call; on failure mark the doc failed and return null.
+    const runOcr = async (fn: () => Promise<typeof extractedData>) => {
+      try {
+        return await fn();
+      } catch (e) {
+        console.error(`[OCR] Document ${documentId} OCR failed:`, e);
+        await db.updateDocumentStatus(documentId, "failed", friendlyOcrError(e));
+        return null;
+      }
+    };
+
+    // A real PDF starts with "%PDF"; reject mislabeled/corrupt files up front.
+    if (mimeType === 'application/pdf' && !fileBuffer.subarray(0, 5).toString('latin1').startsWith('%PDF')) {
+      await db.updateDocumentStatus(documentId, "failed", "This file isn't a valid PDF (it may be corrupt or mislabeled). Please re-export or re-scan it.");
+      return;
+    }
+
     if (isImage) {
       // Images have no text layer — OCR them with Claude vision.
       if (!OCR_IMAGE_TYPES.includes(mimeType)) {
@@ -398,7 +426,9 @@ async function processDocumentAsync(documentId: number, s3Url: string, mimeType:
         return;
       }
       console.log(`[OCR] Document ${documentId} is an image; running Claude OCR`);
-      extractedData = await ocrImage(fileBuffer, mimeType);
+      const r = await runOcr(() => ocrImage(fileBuffer, mimeType));
+      if (!r) return;
+      extractedData = r;
     } else {
       try {
         extractedData = await extractText(fileBuffer, mimeType);
@@ -407,7 +437,9 @@ async function processDocumentAsync(documentId: number, s3Url: string, mimeType:
         // the raw PDF directly before giving up.
         if (mimeType === 'application/pdf' && isAnthropic) {
           console.log(`[OCR] Document ${documentId} failed text extraction (${err instanceof Error ? err.message : err}); running Claude OCR fallback`);
-          extractedData = await ocrPdf(fileBuffer);
+          const r = await runOcr(() => ocrPdf(fileBuffer));
+          if (!r) return;
+          extractedData = r;
         } else {
           throw err;
         }
@@ -421,7 +453,9 @@ async function processDocumentAsync(documentId: number, s3Url: string, mimeType:
         if (looksScanned) {
           if (isAnthropic) {
             console.log(`[OCR] Document ${documentId} looks scanned; running Claude OCR fallback`);
-            extractedData = await ocrPdf(fileBuffer);
+            const r = await runOcr(() => ocrPdf(fileBuffer));
+            if (!r) return;
+            extractedData = r;
           } else {
             await db.updateDocumentStatus(
               documentId,
@@ -479,14 +513,40 @@ async function processDocumentAsync(documentId: number, s3Url: string, mimeType:
     await db.updateDocumentWithTitle(documentId, extractionResult.documentTitle, extractedData.text);
     await db.updateDocumentStatus(documentId, "completed");
 
-    // Reconcile actor names across all of this user's facts so the same person
-    // written different ways (e.g. "Priya" / "Priya Sharma" / "Sharma, Priya")
-    // collapses to one canonical name. Best-effort; never fails the upload.
-    await reconcileUserActors(document.userId);
+    // Rebuild derived case data (actor reconciliation + case summary + dramatis
+    // personae) once the document set settles. Debounced so a multi-file upload
+    // triggers one rebuild. Key-fact materiality stays an explicit user action.
+    scheduleCaseRefresh(document.userId);
 
   } catch (error) {
     console.error(`Document processing failed for ${documentId}:`, error);
     await db.updateDocumentStatus(documentId, "failed", String(error));
   }
+}
+
+// Debounced per-user rebuild of derived case data after documents change, so
+// the case memory / chronology actors / dramatis personae always reflect the
+// CURRENT document set (and a new case doesn't show a previous case's data).
+const caseRefreshTimers = new Map<number, ReturnType<typeof setTimeout>>();
+function scheduleCaseRefresh(userId: number) {
+  const existing = caseRefreshTimers.get(userId);
+  if (existing) clearTimeout(existing);
+  caseRefreshTimers.set(userId, setTimeout(() => {
+    caseRefreshTimers.delete(userId);
+    refreshCaseData(userId).catch(err => console.error('[CaseRefresh] failed:', err));
+  }, 4000));
+}
+
+async function refreshCaseData(userId: number) {
+  await reconcileUserActors(userId);
+  const facts = await db.getUserFacts(userId);
+  if (!facts || facts.length === 0) {
+    // No documents/facts left — clear stale derived data for a fresh slate.
+    await db.clearCaseMemory(userId);
+    await db.replaceDramatisPersonae(userId, []);
+    return;
+  }
+  await generateCaseSummary(userId);
+  await generateDramatisPersonae(userId);
 }
 
