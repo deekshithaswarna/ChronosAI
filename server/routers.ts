@@ -380,7 +380,37 @@ async function processDocumentAsync(documentId: number, s3Url: string, mimeType:
 
     // Extract text using Node.js
     const extractedData = await extractText(fileBuffer, mimeType);
-    
+
+    // Detect scanned / image-only PDFs: pdf-parse reads the embedded text layer
+    // only, so a scan yields ~no text. Flag it clearly instead of silently
+    // completing with zero facts (which would look like an empty document).
+    if (mimeType === 'application/pdf') {
+      const stripped = (extractedData.text || '').replace(/\s+/g, '');
+      const pageCount = extractedData.pages?.length || 1;
+      const looksScanned = stripped.length < 100 || stripped.length / pageCount < 25;
+      if (looksScanned) {
+        const { ocrPdf, llmConfig } = await import('./_core/llm');
+        if (llmConfig().provider === 'anthropic') {
+          // Claude reads scanned PDFs natively — OCR it and feed the pipeline.
+          console.log(`[OCR] Document ${documentId} looks scanned; running Claude OCR fallback`);
+          const ocr = await ocrPdf(fileBuffer);
+          if ((ocr.text || '').replace(/\s+/g, '').length < 50) {
+            await db.updateDocumentStatus(documentId, "failed", "This appears to be a scanned PDF, but OCR could not extract readable text.");
+            return;
+          }
+          extractedData.text = ocr.text;
+          extractedData.pages = ocr.pages;
+        } else {
+          await db.updateDocumentStatus(
+            documentId,
+            "failed",
+            "This looks like a scanned/image-only PDF. OCR fallback requires the Anthropic/Claude provider (set LLM_PROVIDER=anthropic)."
+          );
+          return;
+        }
+      }
+    }
+
     // Extract facts using LLM (returns ExtractionResult with documentTitle and facts)
     const extractionResult = await extractFactsFromText(extractedData.text, extractedData.pages, filename);
     
