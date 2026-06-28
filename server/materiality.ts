@@ -95,11 +95,17 @@ export async function evaluateMateriality(userId: number): Promise<{ scored: num
     scored++;
 
     // Tag the fact with the case's neutral issue labels (closed set only).
-    if (issueLabels.length) {
-      const tags = (Array.isArray(s.issues) ? s.issues : [])
-        .map(t => issueLabels.find(l => l.toLowerCase() === String(t).toLowerCase()))
-        .filter((t): t is string => Boolean(t));
-      await db.updateFactAiIssues(s.id, Array.from(new Set(tags)));
+    // When there are no labels, clear any stale tags from a previous run.
+    const desiredTags = issueLabels.length
+      ? Array.from(new Set(
+          (Array.isArray(s.issues) ? s.issues : [])
+            .map(t => issueLabels.find(l => l.toLowerCase() === String(t).toLowerCase()))
+            .filter((t): t is string => Boolean(t))
+        ))
+      : [];
+    const currentTags = Array.isArray((fact as any).aiIssues) ? (fact as any).aiIssues : [];
+    if (JSON.stringify(desiredTags) !== JSON.stringify(currentTags)) {
+      await db.updateFactAiIssues(s.id, desiredTags);
     }
 
     // Mirror the rationale into the (user-editable) Comments column when the

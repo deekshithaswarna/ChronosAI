@@ -390,7 +390,8 @@ function buildAnthropicRequest(params: InvokeParams, cfg: ReturnType<typeof llmC
 
   const body: Record<string, unknown> = {
     model: cfg.model,
-    max_tokens: Number(process.env.LLM_MAX_TOKENS ?? 8192),
+    // Generous default so large structured outputs aren't truncated mid-JSON.
+    max_tokens: Number(process.env.LLM_MAX_TOKENS ?? 32000),
     messages: convMessages,
   };
   if (systemText) body.system = systemText;
@@ -436,6 +437,11 @@ function buildAnthropicRequest(params: InvokeParams, cfg: ReturnType<typeof llmC
 // Map an Anthropic Messages response onto the OpenAI-shaped InvokeResult that
 // callers expect. Structured output is returned as JSON-stringified tool input.
 function parseAnthropicResponse(json: any, structuredToolName?: string): InvokeResult {
+  if (json?.stop_reason === "max_tokens") {
+    console.warn(
+      "[LLM] Anthropic response hit max_tokens — output may be truncated. Raise LLM_MAX_TOKENS or reduce the request size."
+    );
+  }
   const blocks: any[] = Array.isArray(json?.content) ? json.content : [];
   let content = "";
   let tool_calls: ToolCall[] | undefined;
@@ -579,7 +585,7 @@ export async function ocrPdf(fileBuffer: Buffer): Promise<{ text: string; pages:
 
   const body = {
     model: cfg.model,
-    max_tokens: Number(process.env.LLM_OCR_MAX_TOKENS ?? 16000),
+    max_tokens: Number(process.env.LLM_OCR_MAX_TOKENS ?? 32000),
     system:
       'You are an OCR engine for legal documents. Transcribe ALL text from the document verbatim in natural reading order. Begin each page with a line containing exactly "[PAGE n]" (n = the page number). Do not summarise, interpret, omit, or add commentary — output only the transcribed text.',
     messages: [

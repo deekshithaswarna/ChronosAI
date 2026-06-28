@@ -414,6 +414,9 @@ export default function ChronologyTable() {
         id: factId,
         comments: newValue,
       });
+      // Drop the local cache so a later server rewrite (e.g. re-evaluate's
+      // "Key fact —" comment) isn't masked by the stale edited value.
+      setEditedComments(prev => { const n = { ...prev }; delete n[factId]; return n; });
       utils.facts.list.invalidate();
     }
   };
@@ -516,6 +519,7 @@ export default function ChronologyTable() {
         id: factId,
         summary: newValue,
       });
+      setEditedDescriptions(prev => { const n = { ...prev }; delete n[factId]; return n; });
       utils.facts.list.invalidate();
       setEditingDescriptionId(null);
     }
@@ -561,8 +565,10 @@ export default function ChronologyTable() {
     if (editedDates[fact.id] !== undefined) {
       return editedDates[fact.id];
     }
-    // Format as YYYY-MM-DD for input[type="date"]
-    return new Date(fact.eventDate).toISOString().split('T')[0];
+    // Format as YYYY-MM-DD for input[type="date"]; guard invalid dates so the
+    // date editor can't crash the row with a RangeError.
+    const d = new Date(fact.eventDate);
+    return isNaN(d.getTime()) ? '' : d.toISOString().split('T')[0];
   };
 
   // Handle Date field change
@@ -575,13 +581,18 @@ export default function ChronologyTable() {
     saveToHistory(); // Save BEFORE making changes
     const newDateValue = editedDates[factId];
     if (newDateValue !== undefined) {
+      // Ignore empty/partial/invalid dates instead of throwing on toISOString().
+      const newDate = new Date(newDateValue);
+      if (isNaN(newDate.getTime())) {
+        setEditingDateId(null);
+        return;
+      }
       try {
-        // Convert YYYY-MM-DD to Date object
-        const newDate = new Date(newDateValue);
         await updateFactMutation.mutateAsync({
           id: factId,
           eventDate: newDate.toISOString(),
         });
+        setEditedDates(prev => { const n = { ...prev }; delete n[factId]; return n; });
         // Invalidate to trigger re-fetch and auto-sort
         utils.facts.list.invalidate();
         setEditingDateId(null);

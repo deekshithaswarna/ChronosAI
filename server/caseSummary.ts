@@ -25,10 +25,18 @@ export async function generateCaseSummary(userId: number): Promise<CaseMemory | 
   if (!facts || facts.length === 0) return undefined;
 
   // Build a compact chronology digest for the model.
-  const digest = facts
-    .map(f => `- ${toISODate(f.eventDate as unknown as Date)} | ${f.actor || 'Unknown'} | ${f.summary}`)
-    .join('\n')
-    .slice(0, 15000);
+  // Build a compact digest; if the chronology is large, sample EVENLY across the
+  // whole timeline (rather than truncating to the first events) so the summary
+  // reflects the full case, not just its opening.
+  const allLines = facts.map(
+    f => `- ${toISODate(f.eventDate as unknown as Date)} | ${f.actor || 'Unknown'} | ${f.summary}`
+  );
+  const MAX_LINES = 120;
+  const sampled =
+    allLines.length <= MAX_LINES
+      ? allLines
+      : allLines.filter((_, i) => i % Math.ceil(allLines.length / MAX_LINES) === 0);
+  const digest = sampled.join('\n').slice(0, 18000);
 
   const documentTitles = Array.from(
     new Set(facts.map(f => f.documentTitle || f.documentName).filter(Boolean))
@@ -75,7 +83,12 @@ Write in neutral, professional language.`,
 
   const content = response?.choices?.[0]?.message?.content;
   if (!content) throw new Error('No content from case-summary LLM call');
-  const parsed = JSON.parse(typeof content === 'string' ? content : JSON.stringify(content));
+  let parsed: any;
+  try {
+    parsed = JSON.parse(typeof content === 'string' ? content : JSON.stringify(content));
+  } catch {
+    throw new Error('Case summary returned invalid JSON (possibly truncated, or the provider ignored the response schema).');
+  }
 
   return db.upsertCaseMemory(userId, {
     title: parsed.title || 'Untitled Case',
